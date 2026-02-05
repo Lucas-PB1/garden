@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Swal from "sweetalert2";
 import { useSharedGarden } from "@/hooks/useSharedGarden";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -27,8 +28,15 @@ export default function SharedGardenPage() {
       </div>
     );
   }
-
-
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    Swal.fire({
+      icon: 'success',
+      title: 'Link Copiado!',
+      text: 'Envie para alguém especial ver este jardim 🌻',
+      confirmButtonColor: '#ec4899'
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 p-4 md:p-8 relative">
@@ -51,13 +59,22 @@ export default function SharedGardenPage() {
              {photos.length > 0 && (
                 <button
                     onClick={() => setShowSlideshow(true)}
-                    className="px-5 py-2.5 md:py-3 rounded-full bg-gradient-to-r from-pink-400 to-rose-400 border border-pink-200 flex items-center justify-center text-white hover:from-pink-500 hover:to-rose-500 transition shadow-lg animate-pulse-slow gap-2 font-medium"
+                    className="relative z-50 px-5 py-2.5 md:py-3 rounded-full bg-gradient-to-r from-pink-400 to-rose-400 border border-pink-200 flex items-center justify-center text-white hover:from-pink-500 hover:to-rose-500 transition shadow-lg animate-pulse-slow gap-2 font-medium"
                     title="Iniciar Apresentação"
                 >
                     <span className="text-lg md:text-xl pl-1">▶️</span>
-                    <span className="hidden md:inline">Assistir</span>
+                    <span>Assistir</span>
                 </button>
             )}
+
+            <button 
+                onClick={handleShare}
+                className="px-6 py-3 rounded-full bg-white text-pink-600 font-medium shadow-sm border border-pink-100 hover:bg-pink-50 transition text-sm flex items-center gap-2 group"
+                title="Compartilhar Link"
+            >
+                <span className="text-lg group-hover:scale-110 transition">🔗</span>
+                <span className="hidden md:inline">Compartilhar</span>
+            </button>
             <Link 
                 href="/garden"
                 className="px-6 py-3 rounded-full bg-white text-gray-800 font-medium shadow-sm border border-gray-100 hover:bg-gray-50 transition text-sm flex items-center gap-2"
@@ -91,6 +108,13 @@ export default function SharedGardenPage() {
              </div>
         )}
       </div>
+        {showSlideshow && (
+          <SlideshowModal 
+            photos={photos} 
+            lovePhrases={lovePhrases || []} 
+            onClose={() => setShowSlideshow(false)} 
+          />
+        )}
     </div>
   );
 }
