@@ -72,7 +72,11 @@ export default function SharedGardenPage() {
           <SpecialDateCounter date={specialDate} title={specialDateTitle || "Data Especial"} />
       )}
 
-      <div className="columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6 relative z-10 mx-auto max-w-7xl">
+      <div className={`columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6 relative z-10 mx-auto ${
+        photos.length === 1 ? 'max-w-sm' : 
+        photos.length === 2 ? 'max-w-2xl' : 
+        photos.length === 3 ? 'max-w-5xl' : 'max-w-7xl'
+      }`}>
         {photos.map((photo) => (
             <GardenPhotoCard 
                 key={photo.id}

@@ -93,20 +93,23 @@ export default function SlideshowModal({
             </div>
 
             {/* Main Content */}
-            <div className="relative w-full h-full flex flex-col items-center justify-center p-4 md:p-10 overflow-hidden">
-                <div
-                    key={currentIndex}
-                    className={`relative w-full h-full max-h-[80vh] flex items-center justify-center transition-all duration-500 transform ${
-                        animating 
-                            ? (slideDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
-                            : 'translate-x-0 opacity-100'
-                    }`}
-                >
-                     <img 
-                        src={currentPhoto.url} 
-                        alt={currentPhoto.caption} 
-                        className="max-h-full max-w-full object-contain rounded-xl shadow-2xl"
-                    />
+            <div className="relative w-full h-full flex flex-col items-center justify-center p-0 md:p-0 overflow-hidden pointer-events-none"> 
+                {/* Visual wrapper with padding to clear controls */}
+                <div className="w-full h-full flex items-center justify-center p-4 pb-20 pt-16 md:p-24">
+                    <div
+                        key={currentIndex}
+                        className={`relative max-w-full max-h-full flex items-center justify-center transition-all duration-500 transform ${
+                            animating 
+                                ? (slideDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
+                                : 'translate-x-0 opacity-100'
+                        }`}
+                    >
+                         <img 
+                            src={currentPhoto.url} 
+                            alt={currentPhoto.caption} 
+                            className="max-h-full max-w-full object-contain rounded-xl shadow-2xl pointer-events-auto"
+                        />
+                    </div>
                 </div>
             </div>
 
