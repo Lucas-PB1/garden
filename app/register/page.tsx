@@ -1,29 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { auth } from "@/lib/firebase/firebase";
-import { useRouter } from "next/navigation";
+import { useRegister } from "@/hooks/useRegister";
 import Link from "next/link";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const router = useRouter();
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: name });
-      router.push("/garden");
-    } catch (err: any) {
-      setError(err.message || "Failed to register. Please try again.");
-    }
-  };
+  const {
+      name,
+      setName,
+      email,
+      setEmail,
+      password,
+      setPassword,
+      error,
+      handleRegister
+  } = useRegister();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fdf2f8] relative overflow-hidden">
@@ -36,9 +26,9 @@ export default function RegisterPage() {
         <div className="text-center mb-8">
           <span className="text-4xl mb-2 block">🌸</span>
           <h1 className="text-3xl font-serif font-bold text-gray-800 mb-2">
-            Join the Garden
+            Junte-se ao Jardim
           </h1>
-          <p className="text-gray-500 text-sm">Create an account to start your collection</p>
+          <p className="text-gray-500 text-sm">Crie uma conta para iniciar sua coleção</p>
         </div>
 
         {error && (
@@ -50,7 +40,7 @@ export default function RegisterPage() {
         <form onSubmit={handleRegister} className="space-y-5">
           <div>
             <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              Your Name
+              Seu Nome
             </label>
             <input
               type="text"
@@ -63,7 +53,7 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              Email
+              E-mail
             </label>
             <input
               type="email"
@@ -76,7 +66,7 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              Password
+              Senha
             </label>
             <input
               type="password"
@@ -91,15 +81,15 @@ export default function RegisterPage() {
             type="submit"
             className="w-full bg-gradient-to-r from-pink-400 to-rose-400 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-pink-400/30 transition transform hover:scale-[1.01] active:scale-[0.99]"
           >
-            Plant Your Seed
+            Plante Sua Semente
           </button>
         </form>
 
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-sm">
-            Already have a spot?{" "}
+            Já tem um lugar?{" "}
             <Link href="/login" className="text-pink-500 font-semibold hover:text-pink-600 transition">
-              Log in here
+              Entre aqui
             </Link>
           </p>
         </div>

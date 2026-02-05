@@ -1,27 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/firebase";
-import { useRouter } from "next/navigation";
+import { useLogin } from "@/hooks/useLogin";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const router = useRouter();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/garden");
-    } catch (err) {
-      setError("Failed to login. Please check your credentials.");
-      console.error(err);
-    }
-  };
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    error,
+    handleLogin
+  } = useLogin();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fdf2f8] relative overflow-hidden">
@@ -34,9 +24,9 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <span className="text-4xl mb-2 block">🌿</span>
           <h1 className="text-3xl font-serif font-bold text-gray-800 mb-2">
-            Welcome Back
+            Bem-vindo de Volta
           </h1>
-          <p className="text-gray-500 text-sm">Enter your secret garden</p>
+          <p className="text-gray-500 text-sm">Entre no seu jardim secreto</p>
         </div>
 
         {error && (
@@ -48,7 +38,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              Email
+              E-mail
             </label>
             <input
               type="email"
@@ -61,7 +51,7 @@ export default function LoginPage() {
           </div>
           <div>
             <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              Password
+              Senha
             </label>
             <input
               type="password"
@@ -76,15 +66,15 @@ export default function LoginPage() {
             type="submit"
             className="w-full bg-gradient-to-r from-emerald-400 to-green-500 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-green-400/30 transition transform hover:scale-[1.01] active:scale-[0.99]"
           >
-            Enter Garden
+            Entrar no Jardim
           </button>
         </form>
         
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-sm">
-            First time here?{" "}
+            Primeira vez aqui?{" "}
             <Link href="/register" className="text-emerald-500 font-semibold hover:text-emerald-600 transition">
-              Grow with us
+              Cresça conosco
             </Link>
           </p>
         </div>

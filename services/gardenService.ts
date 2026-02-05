@@ -7,7 +7,11 @@ import {
   getDocs, 
   serverTimestamp,
   deleteDoc,
-  doc
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  Timestamp
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
@@ -21,8 +25,13 @@ export interface GardenPhoto {
 }
 
 export interface UserProfile {
-    displayName: string;
+    displayName?: string;
     photoURL?: string;
+    gardenName?: string;
+    editKey?: string;
+    specialDate?: any; // Firestore Timestamp or string
+    specialDateTitle?: string;
+    lovePhrases?: string[];
 }
 
 export const uploadPhoto = async (
@@ -81,6 +90,54 @@ export const deletePhoto = async (photoId: string, storagePath: string): Promise
     await deleteDoc(doc(db, "photos", photoId));
 };
 
+export const updateGardenName = async (userId: string, name: string): Promise<void> => {
+    const userRef = doc(db, "users", userId);
+    // Use setDoc with merge: true to create if doesn't exist or update if it does
+    await setDoc(userRef, { gardenName: name }, { merge: true });
+};
+
+export const updateSpecialDate = async (userId: string, date: Date | null, title: string): Promise<void> => {
+    const userRef = doc(db, "users", userId);
+    await setDoc(userRef, { 
+        specialDate: date ? date : null,
+        specialDateTitle: title 
+    }, { merge: true });
+};
+
+export const updateLovePhrases = async (userId: string, phrases: string[]): Promise<void> => {
+    const userRef = doc(db, "users", userId);
+    await setDoc(userRef, { lovePhrases: phrases }, { merge: true });
+};
+
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-    return null; 
+    try {
+        const userRef = doc(db, "users", userId);
+        const docSnap = await getDoc(userRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as UserProfile;
+        }
+        return null;
+    } catch (e) {
+        console.error("Error fetching profile", e);
+        return null;
+    }
+}
+
+export const getGardenKey = async (userId: string): Promise<string> => {
+    const profile = await getUserProfile(userId);
+    if (profile?.editKey) {
+        return profile.editKey;
+    }
+    
+    // Generate new key if doesn't exist
+    const newKey = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const userRef = doc(db, "users", userId);
+    await setDoc(userRef, { editKey: newKey }, { merge: true });
+    return newKey;
+}
+
+export const verifyGardenKey = async (userId: string, key: string): Promise<boolean> => {
+    if (!key) return false;
+    const profile = await getUserProfile(userId);
+    return profile?.editKey === key;
 }
