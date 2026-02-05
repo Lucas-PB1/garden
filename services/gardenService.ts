@@ -50,12 +50,20 @@ export const uploadPhoto = async (
   });
   const downloadURL = await getDownloadURL(storageRef);
 
+  // Save to Firestore
+  // We need auth to set uploadedBy
+  const { getAuth } = await import("firebase/auth");
+  const auth = getAuth();
+
   await addDoc(collection(db, "photos"), {
     userId,
     url: downloadURL,
     path: storagePath,
     caption,
     createdAt: serverTimestamp(),
+    // Collaboration fields
+    editKey: editKey || null,
+    uploadedBy: auth.currentUser?.uid || userId
   });
 
   return downloadURL;
