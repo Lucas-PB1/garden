@@ -49,7 +49,7 @@ export function useSharedGarden(userId: string, editKey?: string | null) {
             }
             const webpFile = await compressImageToWebP(originalFile);
             const caption = new Date().toLocaleDateString() + " (Colaborador)"; 
-            await uploadPhoto(webpFile, userId, caption);
+            await uploadPhoto(webpFile, userId, caption, editKey || undefined);
             
             // Refresh
             const updatedPhotos = await getGardenPhotos(userId);

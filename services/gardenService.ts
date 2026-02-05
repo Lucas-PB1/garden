@@ -37,18 +37,19 @@ export interface UserProfile {
 export const uploadPhoto = async (
   file: File, 
   userId: string, 
-  caption: string
+  caption: string,
+  editKey?: string
 ): Promise<string> => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
   const storagePath = `gardens/${userId}/${fileName}`;
   const storageRef = ref(storage, storagePath);
 
-  // Upload to Storage
-  await uploadBytes(storageRef, file);
+  await uploadBytes(storageRef, file, {
+    customMetadata: editKey ? { editKey: editKey } : undefined
+  });
   const downloadURL = await getDownloadURL(storageRef);
 
-  // Save to Firestore
   await addDoc(collection(db, "photos"), {
     userId,
     url: downloadURL,
