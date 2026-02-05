@@ -13,7 +13,15 @@ export function useLogin() {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/garden");
+      
+      const params = new URLSearchParams(window.location.search);
+      const callbackUrl = params.get("callbackUrl");
+      
+      if (callbackUrl) {
+        router.push(callbackUrl);
+      } else {
+        router.push("/garden");
+      }
     } catch (err) {
       setError("Falha ao entrar. Verifique suas credenciais.");
       console.error(err);

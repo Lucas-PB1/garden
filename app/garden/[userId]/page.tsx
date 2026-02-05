@@ -1,19 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { useSharedGarden } from "@/hooks/useSharedGarden";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase/firebase";
 import SpecialDateCounter from "@/components/SpecialDateCounter";
 import GardenPhotoCard from "@/components/GardenPhotoCard";
 import SlideshowModal from "@/components/SlideshowModal";
 
 export default function SharedGardenPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const userId = params.userId as string;
+  const editKey = searchParams.get("key");
   
-  const { photos, loading, gardenName, specialDate, specialDateTitle, lovePhrases } = useSharedGarden(userId);
+  // Auth Check for Collaborators
+  useEffect(() => {
+    if (editKey) {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                const callbackUrl = encodeURIComponent(window.location.href);
+                router.push(`/login?callbackUrl=${callbackUrl}`);
+            }
+        });
+        return () => unsubscribe();
+    }
+  }, [editKey, router]);
+
+  const { 
+    photos, 
+    loading, 
+    gardenName, 
+    specialDate, 
+    specialDateTitle, 
+    lovePhrases,
+    // Collaborator props
+    isCollaborator,
+    handleCollaborativeUpload,
+    handleCollaborativeDelete,
+    fileInputRef,
+    uploading,
+    deletingId
+  } = useSharedGarden(userId, editKey);
   const [showSlideshow, setShowSlideshow] = useState(false);
   // Convert timestamp if needed, but the hook should handle it. 
   // Wait, hook returns what it gets. Let's make sure pass it correctly.
@@ -89,17 +121,45 @@ export default function SharedGardenPage() {
           <SpecialDateCounter date={specialDate} title={specialDateTitle || "Data Especial"} />
       )}
 
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleCollaborativeUpload} 
+        accept="image/*" 
+        className="hidden" 
+      />
+
+      {/* Collaborator Upload Button */}
+      {isCollaborator && (
+         <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="fixed bottom-6 right-6 md:right-10 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full shadow-lg shadow-pink-500/40 text-white flex items-center justify-center z-50 hover:scale-110 active:scale-90 transition"
+            title="Adicionar Foto como Colaborador"
+         >
+           {uploading ? (
+               <span className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+           ) : (
+               <span className="text-3xl pb-1">+</span>
+           )}
+         </button>
+      )}
+
       <div className={`columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6 relative z-10 mx-auto ${
         photos.length === 1 ? 'max-w-sm' : 
         photos.length === 2 ? 'max-w-2xl' : 
         photos.length === 3 ? 'max-w-5xl' : 'max-w-7xl'
       }`}>
         {photos.map((photo) => (
-            <GardenPhotoCard 
-                key={photo.id}
-                photo={photo} 
-                lovePhrases={lovePhrases}
-            />
+            <div key={photo.id} className="w-full">
+                <GardenPhotoCard 
+                    photo={photo} 
+                    lovePhrases={lovePhrases}
+                    isOwner={isCollaborator}
+                    onDelete={handleCollaborativeDelete}
+                    deletingId={deletingId}
+                />
+            </div>
         ))}
         
         {photos.length === 0 && (
