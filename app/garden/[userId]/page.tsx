@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase/firebase";
-import { useSharedGarden } from "@/hooks/useSharedGarden";
-import GardenPhotoCard from "@/components/GardenPhotoCard";
-import SpecialDateCounter from "@/components/SpecialDateCounter";
-import SlideshowModal from "@/components/SlideshowModal";
 import GardenLayout from "@/components/GardenLayout";
+import GardenPhotoCard from "@/components/GardenPhotoCard";
+import SlideshowModal from "@/components/SlideshowModal";
+import SpecialDateCounter from "@/components/SpecialDateCounter";
+import { useSharedGarden } from "@/hooks/useSharedGarden";
+import { auth } from "@/lib/firebase/firebase";
 import { GardenPhoto, GardenPhotoWithPhrase } from "@/services/gardenService";
+import { onAuthStateChanged } from "firebase/auth";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function SharedGardenPage() {
   const params = useParams();
@@ -43,7 +43,7 @@ export default function SharedGardenPage() {
     handleCollaborativeDelete,
     specialDate,
     specialDateTitle,
-    lovePhrases
+    lovePhrases,
   } = useSharedGarden(userId, editKey);
 
   const [showSlideshow, setShowSlideshow] = useState(false);
@@ -76,9 +76,14 @@ export default function SharedGardenPage() {
               className="px-8 py-3 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold shadow-lg hover:shadow-pink-500/30 transition transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {uploading ? (
-                <><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span><span>Plantando...</span></>
+                <>
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  <span>Plantando...</span>
+                </>
               ) : (
-                <><span className="text-lg">🌸</span> Plantar Memória</>
+                <>
+                  <span className="text-lg">🌸</span> Plantar Memória
+                </>
               )}
             </button>
           )}
@@ -95,7 +100,9 @@ export default function SharedGardenPage() {
         </div>
       </header>
 
-      {specialDate && <SpecialDateCounter date={specialDate} title={specialDateTitle || "Data Especial"} />}
+      {specialDate && (
+        <SpecialDateCounter date={specialDate} title={specialDateTitle || "Data Especial"} />
+      )}
 
       <input
         type="file"

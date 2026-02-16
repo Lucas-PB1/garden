@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function useLogin() {
   const [email, setEmail] = useState("");
@@ -13,10 +13,10 @@ export function useLogin() {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      
+
       const params = new URLSearchParams(window.location.search);
       const callbackUrl = params.get("callbackUrl");
-      
+
       if (callbackUrl) {
         router.push(callbackUrl);
       } else {
@@ -34,6 +34,6 @@ export function useLogin() {
     password,
     setPassword,
     error,
-    handleLogin
+    handleLogin,
   };
 }

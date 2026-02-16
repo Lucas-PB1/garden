@@ -3,14 +3,22 @@
 @theme {
   --font-geist-sans: "Geist", sans-serif;
   --font-geist-mono: "Geist Mono", monospace;
-  
+
   --animate-blob: blob 7s infinite;
-  
+
   --keyframes-blob: {
-    0%: { transform: translate(0px, 0px) scale(1) };
-    33%: { transform: translate(30px, -50px) scale(1.1) };
-    66%: { transform: translate(-20px, 20px) scale(0.9) };
-    100%: { transform: translate(0px, 0px) scale(1) };
+    0%: {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33%: {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66%: {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100%: {
+      transform: translate(0px, 0px) scale(1);
+    }
   };
 }
 
@@ -33,16 +41,21 @@ body {
 }
 
 /* Global Input Legibility Fix */
-input, textarea, select {
+input,
+textarea,
+select {
   color: #1f2937 !important; /* gray-800 */
 }
 
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: #9ca3af !important; /* gray-400 */
 }
 
 /* Ensure SweetAlert2 inputs are also legible */
-.swal2-input, .swal2-textarea, .swal2-select {
+.swal2-input,
+.swal2-textarea,
+.swal2-select {
   color: #1f2937 !important;
   background-color: #ffffff !important;
 }

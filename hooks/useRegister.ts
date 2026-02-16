@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase/firebase";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function useRegister() {
   const [name, setName] = useState("");
@@ -17,8 +17,9 @@ export function useRegister() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
       router.push("/garden");
-    } catch (err: any) {
-      setError(err.message || "Falha ao registrar. Tente novamente.");
+    } catch (err) {
+      const firebaseError = err as { message?: string };
+      setError(firebaseError.message || "Falha ao registrar. Tente novamente.");
     }
   };
 
@@ -30,6 +31,6 @@ export function useRegister() {
     password,
     setPassword,
     error,
-    handleRegister
+    handleRegister,
   };
 }

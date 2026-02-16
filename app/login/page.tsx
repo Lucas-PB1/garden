@@ -4,14 +4,7 @@ import { useLogin } from "@/hooks/useLogin";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const {
-    email,
-    setEmail,
-    password,
-    setPassword,
-    error,
-    handleLogin
-  } = useLogin();
+  const { email, setEmail, password, setPassword, error, handleLogin } = useLogin();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fdf2f8] relative overflow-hidden">
@@ -23,9 +16,7 @@ export default function LoginPage() {
       <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.05)] w-full max-w-md border border-white/50 relative z-10 mx-4">
         <div className="text-center mb-8">
           <span className="text-4xl mb-2 block">🌿</span>
-          <h1 className="text-3xl font-serif font-bold text-gray-800 mb-2">
-            Bem-vindo de Volta
-          </h1>
+          <h1 className="text-3xl font-serif font-bold text-gray-800 mb-2">Bem-vindo de Volta</h1>
           <p className="text-gray-500 text-sm">Entre no seu jardim secreto</p>
         </div>
 
@@ -37,9 +28,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              E-mail
-            </label>
+            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">E-mail</label>
             <input
               type="email"
               value={email}
@@ -50,9 +39,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              Senha
-            </label>
+            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">Senha</label>
             <input
               type="password"
               value={password}
@@ -69,11 +56,14 @@ export default function LoginPage() {
             Entrar no Jardim
           </button>
         </form>
-        
+
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-sm">
             Primeira vez aqui?{" "}
-            <Link href="/register" className="text-emerald-500 font-semibold hover:text-emerald-600 transition">
+            <Link
+              href="/register"
+              className="text-emerald-500 font-semibold hover:text-emerald-600 transition"
+            >
               Cresça conosco
             </Link>
           </p>

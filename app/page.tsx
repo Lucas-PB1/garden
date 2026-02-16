@@ -14,14 +14,14 @@ export default function LandingPage() {
           <span>🌸</span> Garden
         </div>
         <div className="flex gap-4">
-          <Link 
-            href="/login" 
+          <Link
+            href="/login"
             className="px-6 py-2 rounded-full text-gray-600 font-medium hover:bg-white/50 transition"
           >
             Entrar
           </Link>
-          <Link 
-            href="/register" 
+          <Link
+            href="/register"
             className="px-6 py-2 rounded-full bg-gray-900 text-white font-medium hover:bg-gray-800 transition shadow-lg shadow-gray-900/20"
           >
             Cadastrar
@@ -37,22 +37,23 @@ export default function LandingPage() {
           </span>
         </h1>
         <p className="text-xl text-gray-600 max-w-lg mb-12">
-          Um espaço dedicado para plantar suas memórias, vê-las crescer e compartilhar seu jardim pessoal com quem você ama.
+          Um espaço dedicado para plantar suas memórias, vê-las crescer e compartilhar seu jardim
+          pessoal com quem você ama.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm sm:max-w-none justify-center">
-            <Link 
-                href="/register" 
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-lg hover:shadow-xl hover:shadow-pink-500/30 transition transform hover:-translate-y-1 block"
-            >
-                Começar a Plantar
-            </Link>
-            <Link 
-                href="/login" 
-                className="px-8 py-4 rounded-2xl bg-white text-gray-800 font-bold text-lg border border-gray-200 hover:bg-gray-50 transition block"
-            >
-                Visitar Jardim
-            </Link>
+          <Link
+            href="/register"
+            className="px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-lg hover:shadow-xl hover:shadow-pink-500/30 transition transform hover:-translate-y-1 block"
+          >
+            Começar a Plantar
+          </Link>
+          <Link
+            href="/login"
+            className="px-8 py-4 rounded-2xl bg-white text-gray-800 font-bold text-lg border border-gray-200 hover:bg-gray-50 transition block"
+          >
+            Visitar Jardim
+          </Link>
         </div>
       </main>
 

@@ -1,19 +1,18 @@
 import { db, storage } from "@/lib/firebase/firebase";
 import {
-  collection,
   addDoc,
-  query,
-  where,
-  getDocs,
-  serverTimestamp,
+  collection,
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
   setDoc,
-  updateDoc,
-  Timestamp
+  Timestamp,
+  where,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 export interface GardenPhoto {
   id: string;
@@ -21,7 +20,7 @@ export interface GardenPhoto {
   url: string;
   path: string;
   caption: string;
-  createdAt: any;
+  createdAt: Timestamp | { seconds: number; nanoseconds: number } | null;
   uploadedBy?: string;
   uploaderName?: string;
 }
@@ -35,7 +34,7 @@ export interface UserProfile {
   photoURL?: string;
   gardenName?: string;
   editKey?: string;
-  specialDate?: any; // Firestore Timestamp or string
+  specialDate?: Timestamp | Date | string | null;
   specialDateTitle?: string;
   lovePhrases?: string[];
 }
@@ -45,15 +44,15 @@ export const uploadPhoto = async (
   userId: string,
   caption: string,
   uploaderName: string,
-  editKey?: string
+  editKey?: string,
 ): Promise<string> => {
-  const fileExt = file.name.split('.').pop();
+  const fileExt = file.name.split(".").pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
   const storagePath = `gardens/${userId}/${fileName}`;
   const storageRef = ref(storage, storagePath);
 
   await uploadBytes(storageRef, file, {
-    customMetadata: editKey ? { editKey: editKey } : undefined
+    customMetadata: editKey ? { editKey: editKey } : undefined,
   });
   const downloadURL = await getDownloadURL(storageRef);
 
@@ -71,7 +70,7 @@ export const uploadPhoto = async (
     // Collaboration fields
     editKey: editKey || null,
     uploadedBy: auth.currentUser?.uid || userId,
-    uploaderName: uploaderName
+    uploaderName: uploaderName,
   });
 
   return downloadURL;
@@ -80,7 +79,7 @@ export const uploadPhoto = async (
 export const getGardenPhotos = async (userId: string): Promise<GardenPhoto[]> => {
   const q = query(
     collection(db, "photos"),
-    where("userId", "==", userId)
+    where("userId", "==", userId),
     // Client-side sorting is sufficient for personal gardens
   );
 
@@ -113,12 +112,20 @@ export const updateGardenName = async (userId: string, name: string): Promise<vo
   await setDoc(userRef, { gardenName: name }, { merge: true });
 };
 
-export const updateSpecialDate = async (userId: string, date: Date | null, title: string): Promise<void> => {
+export const updateSpecialDate = async (
+  userId: string,
+  date: Date | null,
+  title: string,
+): Promise<void> => {
   const userRef = doc(db, "users", userId);
-  await setDoc(userRef, {
-    specialDate: date ? date : null,
-    specialDateTitle: title
-  }, { merge: true });
+  await setDoc(
+    userRef,
+    {
+      specialDate: date ? date : null,
+      specialDateTitle: title,
+    },
+    { merge: true },
+  );
 };
 
 export const updateLovePhrases = async (userId: string, phrases: string[]): Promise<void> => {
@@ -138,7 +145,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     console.error("Error fetching profile", e);
     return null;
   }
-}
+};
 
 export const getGardenKey = async (userId: string): Promise<string> => {
   const profile = await getUserProfile(userId);
@@ -147,14 +154,15 @@ export const getGardenKey = async (userId: string): Promise<string> => {
   }
 
   // Generate new key if doesn't exist
-  const newKey = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const newKey =
+    Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   const userRef = doc(db, "users", userId);
   await setDoc(userRef, { editKey: newKey }, { merge: true });
   return newKey;
-}
+};
 
 export const verifyGardenKey = async (userId: string, key: string): Promise<boolean> => {
   if (!key) return false;
   const profile = await getUserProfile(userId);
   return profile?.editKey === key;
-}
+};

@@ -4,16 +4,8 @@ import { useRegister } from "@/hooks/useRegister";
 import Link from "next/link";
 
 export default function RegisterPage() {
-  const {
-      name,
-      setName,
-      email,
-      setEmail,
-      password,
-      setPassword,
-      error,
-      handleRegister
-  } = useRegister();
+  const { name, setName, email, setEmail, password, setPassword, error, handleRegister } =
+    useRegister();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fdf2f8] relative overflow-hidden">
@@ -25,9 +17,7 @@ export default function RegisterPage() {
       <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.05)] w-full max-w-md border border-white/50 relative z-10 mx-4">
         <div className="text-center mb-8">
           <span className="text-4xl mb-2 block">🌸</span>
-          <h1 className="text-3xl font-serif font-bold text-gray-800 mb-2">
-            Junte-se ao Jardim
-          </h1>
+          <h1 className="text-3xl font-serif font-bold text-gray-800 mb-2">Junte-se ao Jardim</h1>
           <p className="text-gray-500 text-sm">Crie uma conta para iniciar sua coleção</p>
         </div>
 
@@ -39,9 +29,7 @@ export default function RegisterPage() {
 
         <form onSubmit={handleRegister} className="space-y-5">
           <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              Seu Nome
-            </label>
+            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">Seu Nome</label>
             <input
               type="text"
               value={name}
@@ -52,9 +40,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              E-mail
-            </label>
+            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">E-mail</label>
             <input
               type="email"
               value={email}
@@ -65,9 +51,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">
-              Senha
-            </label>
+            <label className="block text-gray-700 text-sm font-semibold mb-2 ml-1">Senha</label>
             <input
               type="password"
               value={password}
@@ -88,7 +72,10 @@ export default function RegisterPage() {
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-sm">
             Já tem um lugar?{" "}
-            <Link href="/login" className="text-pink-500 font-semibold hover:text-pink-600 transition">
+            <Link
+              href="/login"
+              className="text-pink-500 font-semibold hover:text-pink-600 transition"
+            >
               Entre aqui
             </Link>
           </p>
