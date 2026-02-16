@@ -3,6 +3,11 @@ import { compressImageToWebP } from "@/utils/imageUtils";
 import { useRef, useState } from "react";
 import Swal from "sweetalert2";
 
+/**
+ * Core hook for managing garden photos, including fetching, uploading, and deleting.
+ * @param userId - The ID of the garden owner.
+ * @returns An object containing photo state and management functions.
+ */
 export function useGardenCore(userId: string) {
   const [photos, setPhotos] = useState<GardenPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -10,6 +15,9 @@ export function useGardenCore(userId: string) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Refreshes the local photo list from the service.
+   */
   const refreshPhotos = async () => {
     try {
       const photosData = await getGardenPhotos(userId);
@@ -21,6 +29,13 @@ export function useGardenCore(userId: string) {
     }
   };
 
+  /**
+   * Handles the selection and upload process of a photo.
+   * Compresses the image and prompts for a memory date.
+   * @param e - React change event from a file input.
+   * @param uploaderName - Name of the person uploading.
+   * @param editKey - Optional collaborative edit key.
+   */
   const handleUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     uploaderName: string,
@@ -61,6 +76,10 @@ export function useGardenCore(userId: string) {
     }
   };
 
+  /**
+   * Prompts for confirmation and deletes a photo.
+   * @param photo - The photo object to delete.
+   */
   const handleDelete = async (photo: GardenPhoto) => {
     const result = await Swal.fire({
       title: "Tem certeza?",

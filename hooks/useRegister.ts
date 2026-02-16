@@ -3,6 +3,11 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+/**
+ * Hook for managing the registration form state and new user creation.
+ * Automatically updates the user's display name upon creation.
+ * @returns Registration form state and handler.
+ */
 export function useRegister() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

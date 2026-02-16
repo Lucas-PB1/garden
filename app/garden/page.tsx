@@ -12,8 +12,12 @@ import { useGarden } from "@/hooks/useGarden";
 import { GardenPhotoWithPhrase } from "@/services/gardenService";
 import { useState } from "react";
 
+/**
+ * Main garden page for owners.
+ * Handles the authorized view, photo management triggers (upload/delete),
+ * and access to the sharing and phrases management hubs.
+ */
 export default function GardenPage() {
-  // ... rest of component
   const {
     user,
     loading,
@@ -234,6 +238,9 @@ export default function GardenPage() {
   );
 }
 
+/**
+ * Functional component for the logout button in the top navigation.
+ */
 function LogoutButton() {
   const { logout } = useAuth();
   return (

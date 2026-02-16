@@ -3,12 +3,15 @@
 import { useLogin } from "@/hooks/useLogin";
 import Link from "next/link";
 
+/**
+ * Login page component.
+ * Provides a secure entry point for existing users to access their personal garden.
+ */
 export default function LoginPage() {
   const { email, setEmail, password, setPassword, error, handleLogin } = useLogin();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fdf2f8] relative overflow-hidden">
-      {/* Floral Decorative Elements */}
       <div className="absolute top-0 left-0 w-64 h-64 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
       <div className="absolute top-0 right-0 w-64 h-64 bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
       <div className="absolute -bottom-8 left-20 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>

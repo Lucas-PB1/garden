@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 
+/**
+ * Public landing page for the application.
+ * Highlights the main features and provides entry points for new and existing users.
+ */
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#fdf2f8] relative overflow-hidden flex flex-col">
-      {/* Background Decor */}
       <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-pink-200/40 rounded-full blur-[100px] mix-blend-multiply"></div>
       <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-green-200/40 rounded-full blur-[100px] mix-blend-multiply"></div>
 

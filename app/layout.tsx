@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   description: "A garden of memories",
 };
 
+/**
+ * Root layout component for the entire application.
+ * Manages global fonts, metadata, and context providers.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{

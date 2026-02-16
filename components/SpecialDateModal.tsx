@@ -5,6 +5,10 @@ interface SpecialDateModalProps {
   currentTitle?: string;
 }
 
+/**
+ * Modal component for configuring the special anniversary or relationship date.
+ * Captures both a custom title and a target date.
+ */
 export default function SpecialDateModal({
   onClose,
   onSave,

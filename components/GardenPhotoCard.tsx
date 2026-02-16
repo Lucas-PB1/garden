@@ -10,6 +10,10 @@ interface GardenPhotoCardProps {
   isOwner?: boolean;
 }
 
+/**
+ * Component for displaying an individual garden photo with its caption and optional phrase.
+ * Features a high-quality center-cropped image and interactive delete action for owners.
+ */
 export default function GardenPhotoCard({
   photo,
   phrase,

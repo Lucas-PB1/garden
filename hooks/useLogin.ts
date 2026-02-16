@@ -3,6 +3,11 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+/**
+ * Hook for managing the login form state and authentication flow.
+ * Redirects to a callback URL or the main garden on success.
+ * @returns Login form state and handler.
+ */
 export function useLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

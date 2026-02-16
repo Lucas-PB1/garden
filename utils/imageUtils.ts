@@ -1,6 +1,11 @@
+/**
+ * Compresses an image file, converts it to WebP format, and crops it to a 3:4 aspect ratio.
+ * @param file - The original image file.
+ * @param quality - Compression quality (0 to 1). Defaults to 0.8.
+ * @returns Promise with the optimized WebP file.
+ */
 export const compressImageToWebP = (file: File, quality = 0.8): Promise<File> => {
   return new Promise((resolve, reject) => {
-    // Check if it's an image
     if (!file.type.startsWith("image/")) {
       reject(new Error("Invalid file type. Please upload an image."));
       return;
@@ -14,29 +19,24 @@ export const compressImageToWebP = (file: File, quality = 0.8): Promise<File> =>
 
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        // Standards for "garden" photos: 3:4 aspect ratio (portrait)
         const TARGET_ASPECT = 3 / 4;
-        const MAX_WIDTH = 1200; // Sufficient for high quality on web
+        const MAX_WIDTH = 1200;
 
         let sourceX = 0,
           sourceY = 0,
           sourceWidth = img.width,
           sourceHeight = img.height;
 
-        // Calculate source cropping coordinates (Center Crop)
         const currentAspect = img.width / img.height;
 
         if (currentAspect > TARGET_ASPECT) {
-          // Wider than target: crop sides
           sourceWidth = img.height * TARGET_ASPECT;
           sourceX = (img.width - sourceWidth) / 2;
         } else if (currentAspect < TARGET_ASPECT) {
-          // Taller than target: crop top/bottom
           sourceHeight = img.width / TARGET_ASPECT;
           sourceY = (img.height - sourceHeight) / 2;
         }
 
-        // Final dimensions limited by MAX_WIDTH
         const targetWidth = Math.min(MAX_WIDTH, sourceWidth);
         const targetHeight = targetWidth / TARGET_ASPECT;
 
@@ -49,7 +49,6 @@ export const compressImageToWebP = (file: File, quality = 0.8): Promise<File> =>
           return;
         }
 
-        // Draw cropped image
         ctx.drawImage(
           img,
           sourceX,
@@ -65,8 +64,6 @@ export const compressImageToWebP = (file: File, quality = 0.8): Promise<File> =>
         canvas.toBlob(
           (blob: Blob | null) => {
             if (blob) {
-              // Create a new File object from the Blob
-              // Change extension to .webp
               const newName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
               const newFile = new File([blob], newName, { type: "image/webp" });
               resolve(newFile);

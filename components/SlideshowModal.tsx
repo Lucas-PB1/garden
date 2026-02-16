@@ -9,6 +9,10 @@ interface SlideshowModalProps {
   startIndex?: number;
 }
 
+/**
+ * Fullscreen slideshow modal for immersive viewing of garden photos.
+ * Features automatic cycling, keyboard navigation, and deterministic love phrase selection.
+ */
 export default function SlideshowModal({
   photos,
   lovePhrases,
@@ -22,7 +26,12 @@ export default function SlideshowModal({
 
   const currentPhoto = photos[currentIndex];
 
-  // Deterministic phrase selection logic
+  /**
+   * Deterministically selects a love phrase based on the photo's unique identifier.
+   * Ensures the same phrase always accompanies the same photo.
+   * @param id - The unique ID of the photo.
+   * @returns An assigned love phrase string.
+   */
   const getPhrase = (id: string) => {
     if (!lovePhrases || lovePhrases.length === 0) return "";
     const index =

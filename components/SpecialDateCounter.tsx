@@ -14,6 +14,10 @@ interface SpecialDateCounterProps {
   title: string;
 }
 
+/**
+ * Visual counter component that tracks time elapsed (or remaining) for a special date.
+ * Displays years, months, days, hours, minutes, and seconds in a stylized grid.
+ */
 export default function SpecialDateCounter({ date, title }: SpecialDateCounterProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
 
@@ -21,7 +25,6 @@ export default function SpecialDateCounter({ date, title }: SpecialDateCounterPr
     if (!date) return;
 
     let targetDate: Date;
-    // Handle Firestore Timestamp or string/Date
     if (typeof date === "object" && "seconds" in date) {
       targetDate = new Date(date.seconds * 1000);
     } else {
@@ -30,10 +33,6 @@ export default function SpecialDateCounter({ date, title }: SpecialDateCounterPr
 
     const calculateTimeLeft = () => {
       const difference = +new Date() - +targetDate;
-
-      // Calculate positive difference if date is in past (counting up)
-      // or future (counting down). For "Anniversary", usually counting UP.
-      // Let's assume counting UP from a past date (relationship start).
 
       let diff = Math.abs(difference);
 

@@ -5,6 +5,9 @@ import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 
+/**
+ * Interface for the global authentication state.
+ */
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -14,11 +17,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  logout: async () => {},
+  logout: async () => { },
 });
 
+/**
+ * Hook to access the current authentication context.
+ * @returns AuthContextType with user data and logout function.
+ */
 export const useAuth = () => useContext(AuthContext);
 
+/**
+ * Provider component that manages the Firebase authentication state lifecycle.
+ */
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +47,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  /**
+   * Logs out the current user and redirects to the login page.
+   */
   const logout = async () => {
     try {
       await signOut(auth);

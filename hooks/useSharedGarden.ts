@@ -2,16 +2,21 @@ import { getUserProfile, UserProfile, verifyGardenKey } from "@/services/gardenS
 import { useEffect, useState } from "react";
 import { useGardenCore } from "./useGardenCore";
 
+/**
+ * Hook for managing the visitor/collaborator view of a shared garden.
+ * Handles profile fetching, key verification, and collaborative upload/delete permissions.
+ * @param userId - ID of the garden owner.
+ * @param editKey - Optional collaborative key from URL params.
+ * @returns An object containing shared garden state and management functions.
+ */
 export function useSharedGarden(userId: string, editKey?: string | null) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCollaborator, setIsCollaborator] = useState(false);
 
-  // Core Logic (Photos, Upload, Delete)
   const { photos, uploading, deletingId, fileInputRef, handleUpload, handleDelete, refreshPhotos } =
     useGardenCore(userId);
 
-  // Initial Fetch & Key Verification
   useEffect(() => {
     async function fetchData() {
       if (userId) {
@@ -34,6 +39,10 @@ export function useSharedGarden(userId: string, editKey?: string | null) {
     fetchData();
   }, [userId, editKey, refreshPhotos]);
 
+  /**
+   * Handles collaborative photo uploads if the user is a verified collaborator.
+   * @param e - React change event from a file input.
+   */
   const handleCollaborativeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isCollaborator) {
       const { getAuth } = await import("firebase/auth");

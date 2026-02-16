@@ -11,6 +11,10 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+/**
+ * Shared garden page for visitors and collaborators.
+ * Detects collaborative access via URL keys and enables upload/delete permissions accordingly.
+ */
 export default function SharedGardenPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -18,7 +22,6 @@ export default function SharedGardenPage() {
   const userId = params.userId as string;
   const editKey = searchParams.get("key");
 
-  // Auth Check for Collaborators
   useEffect(() => {
     if (editKey) {
       const unsubscribe = onAuthStateChanged(auth, (user) => {

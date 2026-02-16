@@ -12,7 +12,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "mock_app_id",
 };
 
-// Initialize Firebase
+/**
+ * Firebase client initialization and export of service instances.
+ * Configured using environment variables with local mocks as fallbacks.
+ */
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);

@@ -11,11 +11,15 @@ import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { useGardenCore } from "./useGardenCore";
 
+/**
+ * Hook for managing the garden owner's view and settings.
+ * Includes authentication check, profile fetching, and collaborative key management.
+ * @returns An object containing garden state and management functions.
+ */
 export function useGarden() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  // Core Logic (Photos, Upload, Delete)
   const {
     photos,
     uploading,
@@ -27,7 +31,6 @@ export function useGarden() {
     refreshPhotos,
   } = useGardenCore(user?.uid || "");
 
-  // Owner specifics
   const [editKey, setEditKey] = useState<string | null>(null);
   const [gardenName, setGardenName] = useState("Meu Jardim");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -37,7 +40,6 @@ export function useGarden() {
   const [showDateModal, setShowDateModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // Love Phrases State
   const [lovePhrases, setLovePhrases] = useState<string[]>([]);
   const phrasesInputRef = useRef<HTMLInputElement>(null);
   const [showPhrasesModal, setShowPhrasesModal] = useState(false);
@@ -76,6 +78,10 @@ export function useGarden() {
     fetchData();
   }, [user, refreshPhotos]);
 
+  /**
+   * Handles file selection and triggers the upload process using the current user's name.
+   * @param e - React change event from a file input.
+   */
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (user) handleUpload(e, user.displayName || "Alguém especial");
   };
@@ -85,6 +91,9 @@ export function useGarden() {
     phrase: lovePhrases.length > 0 ? lovePhrases[index % lovePhrases.length] : "",
   }));
 
+  /**
+   * Copies the public view-only link to the clipboard.
+   */
   const copyViewLink = () => {
     if (user) {
       navigator.clipboard.writeText(`${window.location.origin}/garden/${user.uid}`);
@@ -93,6 +102,9 @@ export function useGarden() {
     }
   };
 
+  /**
+   * Copies the collaborative edit link to the clipboard.
+   */
   const copyEditLink = () => {
     if (user && editKey) {
       navigator.clipboard.writeText(`${window.location.origin}/garden/${user.uid}?key=${editKey}`);
@@ -101,6 +113,9 @@ export function useGarden() {
     }
   };
 
+  /**
+   * Saves the updated garden name to the user's profile.
+   */
   const saveName = async () => {
     if (user && tempName.trim()) {
       const newName = tempName.trim();
@@ -116,6 +131,11 @@ export function useGarden() {
     }
   };
 
+  /**
+   * Saves a special countdown date and title.
+   * @param date - The target date.
+   * @param title - The title of the special date.
+   */
   const handleSaveSpecialDate = async (date: Date | null, title: string) => {
     if (user) {
       try {
@@ -130,6 +150,10 @@ export function useGarden() {
     }
   };
 
+  /**
+   * Imports a JSON file containing love phrases.
+   * @param e - React change event from a file input.
+   */
   const handlePhrasesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0] && user) {
       const reader = new FileReader();
@@ -152,6 +176,10 @@ export function useGarden() {
     }
   };
 
+  /**
+   * Persists updated love phrases to the user's profile.
+   * @param newPhrases - Array of strings.
+   */
   const handleSavePhrases = async (newPhrases: string[]) => {
     if (user) {
       await updateLovePhrases(user.uid, newPhrases);

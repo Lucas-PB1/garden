@@ -4,6 +4,10 @@ interface ShareModalProps {
   onCopyEdit: () => void;
 }
 
+/**
+ * Modal component for sharing garden access links.
+ * Provides options for view-only public access or collaborative edit access.
+ */
 export default function ShareModal({ onClose, onCopyView, onCopyEdit }: ShareModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

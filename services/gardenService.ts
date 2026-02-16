@@ -14,6 +14,9 @@ import {
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
+/**
+ * Interface representing a photo in the garden.
+ */
 export interface GardenPhoto {
   id: string;
   userId: string;
@@ -25,10 +28,16 @@ export interface GardenPhoto {
   uploaderName?: string;
 }
 
+/**
+ * Interface representing a garden photo with an assigned phrase.
+ */
 export interface GardenPhotoWithPhrase extends GardenPhoto {
   phrase: string;
 }
 
+/**
+ * Interface representing the user's profile and garden settings.
+ */
 export interface UserProfile {
   displayName?: string;
   photoURL?: string;
@@ -39,6 +48,15 @@ export interface UserProfile {
   lovePhrases?: string[];
 }
 
+/**
+ * Uploads a photo to storage and saves metadata to Firestore.
+ * @param file - The photo file to upload.
+ * @param userId - ID of the garden owner.
+ * @param caption - Photo caption/date.
+ * @param uploaderName - Name of the person uploading.
+ * @param editKey - Optional collaborative edit key.
+ * @returns Promise with the download URL.
+ */
 export const uploadPhoto = async (
   file: File,
   userId: string,
@@ -56,8 +74,6 @@ export const uploadPhoto = async (
   });
   const downloadURL = await getDownloadURL(storageRef);
 
-  // Save to Firestore
-  // We need auth to set uploadedBy
   const { getAuth } = await import("firebase/auth");
   const auth = getAuth();
 
@@ -67,7 +83,6 @@ export const uploadPhoto = async (
     path: storagePath,
     caption,
     createdAt: serverTimestamp(),
-    // Collaboration fields
     editKey: editKey || null,
     uploadedBy: auth.currentUser?.uid || userId,
     uploaderName: uploaderName,
@@ -76,12 +91,13 @@ export const uploadPhoto = async (
   return downloadURL;
 };
 
+/**
+ * Fetches all photos for a specific garden.
+ * @param userId - ID of the garden owner.
+ * @returns Promise with array of GardenPhoto.
+ */
 export const getGardenPhotos = async (userId: string): Promise<GardenPhoto[]> => {
-  const q = query(
-    collection(db, "photos"),
-    where("userId", "==", userId),
-    // Client-side sorting is sufficient for personal gardens
-  );
+  const q = query(collection(db, "photos"), where("userId", "==", userId));
 
   const querySnapshot = await getDocs(q);
   const photos = querySnapshot.docs.map((doc) => ({
@@ -89,7 +105,6 @@ export const getGardenPhotos = async (userId: string): Promise<GardenPhoto[]> =>
     ...doc.data(),
   })) as GardenPhoto[];
 
-  // detailed sort that handles Timestamp objects or fallback
   return photos.sort((a, b) => {
     const timeA = a.createdAt?.seconds || 0;
     const timeB = b.createdAt?.seconds || 0;
@@ -97,21 +112,33 @@ export const getGardenPhotos = async (userId: string): Promise<GardenPhoto[]> =>
   });
 };
 
+/**
+ * Deletes a photo from both storage and Firestore.
+ * @param photoId - Firestore document ID.
+ * @param storagePath - Firebase Storage path.
+ */
 export const deletePhoto = async (photoId: string, storagePath: string): Promise<void> => {
-  // Delete from Storage
   const storageRef = ref(storage, storagePath);
   await deleteObject(storageRef);
-
-  // Delete from Firestore
   await deleteDoc(doc(db, "photos", photoId));
 };
 
+/**
+ * Updates the custom name of the garden.
+ * @param userId - ID of the user.
+ * @param name - New garden name.
+ */
 export const updateGardenName = async (userId: string, name: string): Promise<void> => {
   const userRef = doc(db, "users", userId);
-  // Use setDoc with merge: true to create if doesn't exist or update if it does
   await setDoc(userRef, { gardenName: name }, { merge: true });
 };
 
+/**
+ * Updates the special countdown date for the garden.
+ * @param userId - ID of the user.
+ * @param date - The target date.
+ * @param title - Title for the countdown.
+ */
 export const updateSpecialDate = async (
   userId: string,
   date: Date | null,
@@ -128,11 +155,21 @@ export const updateSpecialDate = async (
   );
 };
 
+/**
+ * Updates the collection of love phrases for the garden.
+ * @param userId - ID of the user.
+ * @param phrases - Array of strings.
+ */
 export const updateLovePhrases = async (userId: string, phrases: string[]): Promise<void> => {
   const userRef = doc(db, "users", userId);
   await setDoc(userRef, { lovePhrases: phrases }, { merge: true });
 };
 
+/**
+ * Retrieves a user profile from Firestore.
+ * @param userId - ID of the user.
+ * @returns Promise with UserProfile or null.
+ */
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
     const userRef = doc(db, "users", userId);
@@ -147,13 +184,17 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
   }
 };
 
+/**
+ * Retrieves or generates the collaborative edit key for a garden.
+ * @param userId - ID of the user.
+ * @returns Promise with the edit key.
+ */
 export const getGardenKey = async (userId: string): Promise<string> => {
   const profile = await getUserProfile(userId);
   if (profile?.editKey) {
     return profile.editKey;
   }
 
-  // Generate new key if doesn't exist
   const newKey =
     Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   const userRef = doc(db, "users", userId);
@@ -161,6 +202,12 @@ export const getGardenKey = async (userId: string): Promise<string> => {
   return newKey;
 };
 
+/**
+ * Verifies if a provided key matches the garden's edit key.
+ * @param userId - ID of the owner.
+ * @param key - Provided key to verify.
+ * @returns Promise with verification result.
+ */
 export const verifyGardenKey = async (userId: string, key: string): Promise<boolean> => {
   if (!key) return false;
   const profile = await getUserProfile(userId);

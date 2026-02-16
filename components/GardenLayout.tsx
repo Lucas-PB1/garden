@@ -5,6 +5,10 @@ interface GardenLayoutProps {
   children: React.ReactNode;
 }
 
+/**
+ * Shared container layout providing the visual foundation for the garden application.
+ * Includes a subtle floral background, gradient overlays, and a responsive content wrapper.
+ */
 export default function GardenLayout({ children }: GardenLayoutProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 p-4 md:p-8 relative">

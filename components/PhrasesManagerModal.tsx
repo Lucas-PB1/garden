@@ -7,6 +7,10 @@ interface PhrasesManagerModalProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
+/**
+ * Modal component for managing the collection of love phrases.
+ * Supports manual entry, bulk JSON import/export, and inline editing/deletion.
+ */
 export default function PhrasesManagerModal({
   phrases,
   onSave,
@@ -18,6 +22,9 @@ export default function PhrasesManagerModal({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /**
+   * Adds a new phrase to the local collection.
+   */
   const handleAdd = () => {
     if (newPhrase.trim()) {
       setLocalPhrases([...localPhrases, newPhrase.trim()]);
@@ -25,16 +32,28 @@ export default function PhrasesManagerModal({
     }
   };
 
+  /**
+   * Removes a phrase from the local collection.
+   * @param index - Index of the phrase to remove.
+   */
   const handleRemove = (index: number) => {
     setLocalPhrases(localPhrases.filter((_, i) => i !== index));
   };
 
+  /**
+   * Updates an individual phrase in the local collection.
+   * @param index - Index of the phrase to update.
+   * @param value - New text value for the phrase.
+   */
   const handleUpdate = (index: number, value: string) => {
     const updated = [...localPhrases];
     updated[index] = value;
     setLocalPhrases(updated);
   };
 
+  /**
+   * Saves the current local collection to the backend.
+   */
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -47,6 +66,9 @@ export default function PhrasesManagerModal({
     }
   };
 
+  /**
+   * Triggers a browser download of the current phrases collection in JSON format.
+   */
   const handleExport = () => {
     const dataStr = JSON.stringify(localPhrases, null, 2);
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
@@ -74,7 +96,6 @@ export default function PhrasesManagerModal({
         </div>
 
         <div className="p-6 overflow-y-auto flex-grow space-y-4 custom-scrollbar">
-          {/* Phrases List */}
           <div className="space-y-3">
             {localPhrases.map((phrase, index) => (
               <div key={index} className="flex gap-2 group animate-fade-in">
@@ -119,7 +140,6 @@ export default function PhrasesManagerModal({
         </div>
 
         <div className="p-6 border-t border-pink-50 bg-gray-50/50 rounded-b-3xl space-y-4">
-          {/* Add New */}
           <div className="flex gap-2">
             <input
               placeholder="Adicione uma nova frase..."
@@ -136,7 +156,6 @@ export default function PhrasesManagerModal({
             </button>
           </div>
 
-          {/* Footer Actions */}
           <div className="flex flex-wrap justify-between items-center gap-3 pt-2">
             <div className="flex gap-2">
               <button
