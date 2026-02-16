@@ -1,10 +1,10 @@
 import { db, storage } from "@/lib/firebase/firebase";
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  getDocs, 
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
   serverTimestamp,
   deleteDoc,
   doc,
@@ -22,22 +22,29 @@ export interface GardenPhoto {
   path: string;
   caption: string;
   createdAt: any;
+  uploadedBy?: string;
+  uploaderName?: string;
+}
+
+export interface GardenPhotoWithPhrase extends GardenPhoto {
+  phrase: string;
 }
 
 export interface UserProfile {
-    displayName?: string;
-    photoURL?: string;
-    gardenName?: string;
-    editKey?: string;
-    specialDate?: any; // Firestore Timestamp or string
-    specialDateTitle?: string;
-    lovePhrases?: string[];
+  displayName?: string;
+  photoURL?: string;
+  gardenName?: string;
+  editKey?: string;
+  specialDate?: any; // Firestore Timestamp or string
+  specialDateTitle?: string;
+  lovePhrases?: string[];
 }
 
 export const uploadPhoto = async (
-  file: File, 
-  userId: string, 
+  file: File,
+  userId: string,
   caption: string,
+  uploaderName: string,
   editKey?: string
 ): Promise<string> => {
   const fileExt = file.name.split('.').pop();
@@ -63,7 +70,8 @@ export const uploadPhoto = async (
     createdAt: serverTimestamp(),
     // Collaboration fields
     editKey: editKey || null,
-    uploadedBy: auth.currentUser?.uid || userId
+    uploadedBy: auth.currentUser?.uid || userId,
+    uploaderName: uploaderName
   });
 
   return downloadURL;
@@ -84,69 +92,69 @@ export const getGardenPhotos = async (userId: string): Promise<GardenPhoto[]> =>
 
   // detailed sort that handles Timestamp objects or fallback
   return photos.sort((a, b) => {
-      const timeA = a.createdAt?.seconds || 0;
-      const timeB = b.createdAt?.seconds || 0;
-      return timeB - timeA;
+    const timeA = a.createdAt?.seconds || 0;
+    const timeB = b.createdAt?.seconds || 0;
+    return timeB - timeA;
   });
 };
 
 export const deletePhoto = async (photoId: string, storagePath: string): Promise<void> => {
-    // Delete from Storage
-    const storageRef = ref(storage, storagePath);
-    await deleteObject(storageRef);
-    
-    // Delete from Firestore
-    await deleteDoc(doc(db, "photos", photoId));
+  // Delete from Storage
+  const storageRef = ref(storage, storagePath);
+  await deleteObject(storageRef);
+
+  // Delete from Firestore
+  await deleteDoc(doc(db, "photos", photoId));
 };
 
 export const updateGardenName = async (userId: string, name: string): Promise<void> => {
-    const userRef = doc(db, "users", userId);
-    // Use setDoc with merge: true to create if doesn't exist or update if it does
-    await setDoc(userRef, { gardenName: name }, { merge: true });
+  const userRef = doc(db, "users", userId);
+  // Use setDoc with merge: true to create if doesn't exist or update if it does
+  await setDoc(userRef, { gardenName: name }, { merge: true });
 };
 
 export const updateSpecialDate = async (userId: string, date: Date | null, title: string): Promise<void> => {
-    const userRef = doc(db, "users", userId);
-    await setDoc(userRef, { 
-        specialDate: date ? date : null,
-        specialDateTitle: title 
-    }, { merge: true });
+  const userRef = doc(db, "users", userId);
+  await setDoc(userRef, {
+    specialDate: date ? date : null,
+    specialDateTitle: title
+  }, { merge: true });
 };
 
 export const updateLovePhrases = async (userId: string, phrases: string[]): Promise<void> => {
-    const userRef = doc(db, "users", userId);
-    await setDoc(userRef, { lovePhrases: phrases }, { merge: true });
+  const userRef = doc(db, "users", userId);
+  await setDoc(userRef, { lovePhrases: phrases }, { merge: true });
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-    try {
-        const userRef = doc(db, "users", userId);
-        const docSnap = await getDoc(userRef);
-        if (docSnap.exists()) {
-            return docSnap.data() as UserProfile;
-        }
-        return null;
-    } catch (e) {
-        console.error("Error fetching profile", e);
-        return null;
+  try {
+    const userRef = doc(db, "users", userId);
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as UserProfile;
     }
+    return null;
+  } catch (e) {
+    console.error("Error fetching profile", e);
+    return null;
+  }
 }
 
 export const getGardenKey = async (userId: string): Promise<string> => {
-    const profile = await getUserProfile(userId);
-    if (profile?.editKey) {
-        return profile.editKey;
-    }
-    
-    // Generate new key if doesn't exist
-    const newKey = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const userRef = doc(db, "users", userId);
-    await setDoc(userRef, { editKey: newKey }, { merge: true });
-    return newKey;
+  const profile = await getUserProfile(userId);
+  if (profile?.editKey) {
+    return profile.editKey;
+  }
+
+  // Generate new key if doesn't exist
+  const newKey = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const userRef = doc(db, "users", userId);
+  await setDoc(userRef, { editKey: newKey }, { merge: true });
+  return newKey;
 }
 
 export const verifyGardenKey = async (userId: string, key: string): Promise<boolean> => {
-    if (!key) return false;
-    const profile = await getUserProfile(userId);
-    return profile?.editKey === key;
+  if (!key) return false;
+  const profile = await getUserProfile(userId);
+  return profile?.editKey === key;
 }

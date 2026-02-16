@@ -31,3 +31,18 @@ body {
   background: var(--background);
   font-family: var(--font-geist-sans);
 }
+
+/* Global Input Legibility Fix */
+input, textarea, select {
+  color: #1f2937 !important; /* gray-800 */
+}
+
+input::placeholder, textarea::placeholder {
+  color: #9ca3af !important; /* gray-400 */
+}
+
+/* Ensure SweetAlert2 inputs are also legible */
+.swal2-input, .swal2-textarea, .swal2-select {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
