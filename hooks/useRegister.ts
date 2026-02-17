@@ -21,7 +21,7 @@ export function useRegister() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
-      router.push("/garden");
+      router.push("/dashboard");
     } catch (err) {
       const firebaseError = err as { message?: string };
       setError(firebaseError.message || "Falha ao registrar. Tente novamente.");

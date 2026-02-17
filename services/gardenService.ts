@@ -19,6 +19,7 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage
  */
 export interface GardenPhoto {
   id: string;
+  gardenId: string;
   userId: string;
   url: string;
   path: string;
@@ -36,54 +37,72 @@ export interface GardenPhotoWithPhrase extends GardenPhoto {
 }
 
 /**
- * Interface representing the user's profile and garden settings.
+ * Interface for garden customization settings.
+ */
+export interface GardenTheme {
+  primaryColor: string;
+  secondaryColor: string;
+  bgType: "floral" | "stars" | "minimalist" | "custom";
+  customBgUrl?: string;
+}
+
+/**
+ * Interface representing a garden entity.
+ */
+export interface Garden {
+  id: string;
+  ownerId: string;
+  name: string;
+  theme: GardenTheme;
+  specialDate?: Timestamp | Date | string | null;
+  specialDateTitle?: string;
+  lovePhrases?: string[];
+  collaboratorIds: string[];
+  createdAt?: Timestamp;
+}
+
+/**
+ * Interface representing the user's profile.
  */
 export interface UserProfile {
   displayName?: string;
   photoURL?: string;
-  gardenName?: string;
-  editKey?: string;
-  specialDate?: Timestamp | Date | string | null;
-  specialDateTitle?: string;
-  lovePhrases?: string[];
 }
 
 /**
  * Uploads a photo to storage and saves metadata to Firestore.
  * @param file - The photo file to upload.
- * @param userId - ID of the garden owner.
+ * @param gardenId - ID of the target garden.
+ * @param userId - ID of the owner.
  * @param caption - Photo caption/date.
  * @param uploaderName - Name of the person uploading.
- * @param editKey - Optional collaborative edit key.
  * @returns Promise with the download URL.
  */
 export const uploadPhoto = async (
   file: File,
+  gardenId: string,
   userId: string,
   caption: string,
   uploaderName: string,
-  editKey?: string,
 ): Promise<string> => {
   const fileExt = file.name.split(".").pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
   const storagePath = `gardens/${userId}/${fileName}`;
   const storageRef = ref(storage, storagePath);
 
-  await uploadBytes(storageRef, file, {
-    customMetadata: editKey ? { editKey: editKey } : undefined,
-  });
+  await uploadBytes(storageRef, file);
   const downloadURL = await getDownloadURL(storageRef);
 
   const { getAuth } = await import("firebase/auth");
   const auth = getAuth();
 
   await addDoc(collection(db, "photos"), {
+    gardenId,
     userId,
     url: downloadURL,
     path: storagePath,
     caption,
     createdAt: serverTimestamp(),
-    editKey: editKey || null,
     uploadedBy: auth.currentUser?.uid || userId,
     uploaderName: uploaderName,
   });
@@ -93,11 +112,11 @@ export const uploadPhoto = async (
 
 /**
  * Fetches all photos for a specific garden.
- * @param userId - ID of the garden owner.
+ * @param gardenId - ID of the garden.
  * @returns Promise with array of GardenPhoto.
  */
-export const getGardenPhotos = async (userId: string): Promise<GardenPhoto[]> => {
-  const q = query(collection(db, "photos"), where("userId", "==", userId));
+export const getGardenPhotos = async (gardenId: string): Promise<GardenPhoto[]> => {
+  const q = query(collection(db, "photos"), where("gardenId", "==", gardenId));
 
   const querySnapshot = await getDocs(q);
   const photos = querySnapshot.docs.map((doc) => ({
@@ -113,6 +132,66 @@ export const getGardenPhotos = async (userId: string): Promise<GardenPhoto[]> =>
 };
 
 /**
+ * Creates a new garden for a user.
+ */
+export const createGarden = async (
+  ownerId: string,
+  name: string,
+  theme?: GardenTheme,
+): Promise<string> => {
+  const gardenRef = await addDoc(collection(db, "gardens"), {
+    ownerId,
+    name,
+    theme: theme || {
+      primaryColor: "#ec4899",
+      secondaryColor: "#f43f5e",
+      bgType: "floral",
+    },
+    collaboratorIds: [],
+    createdAt: serverTimestamp(),
+  });
+  return gardenRef.id;
+};
+
+/**
+ * Fetches a specific garden by ID.
+ */
+export const getGarden = async (gardenId: string): Promise<Garden | null> => {
+  const gardenSnap = await getDoc(doc(db, "gardens", gardenId));
+  if (gardenSnap.exists()) {
+    return { id: gardenSnap.id, ...gardenSnap.data() } as Garden;
+  }
+  return null;
+};
+
+/**
+ * Fetches all gardens where user is owner or collaborator.
+ */
+export const getUserGardens = async (userId: string): Promise<Garden[]> => {
+  const ownedQ = query(collection(db, "gardens"), where("ownerId", "==", userId));
+  const sharedQ = query(collection(db, "gardens"), where("collaboratorIds", "array-contains", userId));
+
+  const [ownedSnap, sharedSnap] = await Promise.all([getDocs(ownedQ), getDocs(sharedQ)]);
+
+  const owned = ownedSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Garden[];
+  const shared = sharedSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Garden[];
+
+  return [...owned, ...shared].sort((a, b) => {
+    const timeA = a.createdAt?.seconds || 0;
+    const timeB = b.createdAt?.seconds || 0;
+    return timeB - timeA;
+  });
+};
+
+/**
+ * Updates garden settings.
+ */
+export const updateGarden = async (gardenId: string, data: Partial<Garden>): Promise<void> => {
+  const gardenRef = doc(db, "gardens", gardenId);
+  await setDoc(gardenRef, data, { merge: true });
+};
+
+/**
  * Deletes a photo from both storage and Firestore.
  * @param photoId - Firestore document ID.
  * @param storagePath - Firebase Storage path.
@@ -125,44 +204,37 @@ export const deletePhoto = async (photoId: string, storagePath: string): Promise
 
 /**
  * Updates the custom name of the garden.
- * @param userId - ID of the user.
+ * @param gardenId - ID of the garden.
  * @param name - New garden name.
  */
-export const updateGardenName = async (userId: string, name: string): Promise<void> => {
-  const userRef = doc(db, "users", userId);
-  await setDoc(userRef, { gardenName: name }, { merge: true });
+export const updateGardenName = async (gardenId: string, name: string): Promise<void> => {
+  await updateGarden(gardenId, { name });
 };
 
 /**
  * Updates the special countdown date for the garden.
- * @param userId - ID of the user.
+ * @param gardenId - ID of the garden.
  * @param date - The target date.
  * @param title - Title for the countdown.
  */
 export const updateSpecialDate = async (
-  userId: string,
+  gardenId: string,
   date: Date | null,
   title: string,
 ): Promise<void> => {
-  const userRef = doc(db, "users", userId);
-  await setDoc(
-    userRef,
-    {
-      specialDate: date ? date : null,
-      specialDateTitle: title,
-    },
-    { merge: true },
-  );
+  await updateGarden(gardenId, {
+    specialDate: date ? date : null,
+    specialDateTitle: title,
+  });
 };
 
 /**
  * Updates the collection of love phrases for the garden.
- * @param userId - ID of the user.
+ * @param gardenId - ID of the garden.
  * @param phrases - Array of strings.
  */
-export const updateLovePhrases = async (userId: string, phrases: string[]): Promise<void> => {
-  const userRef = doc(db, "users", userId);
-  await setDoc(userRef, { lovePhrases: phrases }, { merge: true });
+export const updateLovePhrases = async (gardenId: string, phrases: string[]): Promise<void> => {
+  await updateGarden(gardenId, { lovePhrases: phrases });
 };
 
 /**
@@ -185,31 +257,35 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 };
 
 /**
- * Retrieves or generates the collaborative edit key for a garden.
- * @param userId - ID of the user.
- * @returns Promise with the edit key.
+ * Adds a collaborator to the garden.
  */
-export const getGardenKey = async (userId: string): Promise<string> => {
-  const profile = await getUserProfile(userId);
-  if (profile?.editKey) {
-    return profile.editKey;
+export const addCollaborator = async (gardenId: string, collabId: string): Promise<void> => {
+  const garden = await getGarden(gardenId);
+  if (garden) {
+    const updated = Array.from(new Set([...garden.collaboratorIds, collabId]));
+    await updateGarden(gardenId, { collaboratorIds: updated });
   }
-
-  const newKey =
-    Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  const userRef = doc(db, "users", userId);
-  await setDoc(userRef, { editKey: newKey }, { merge: true });
-  return newKey;
 };
 
 /**
- * Verifies if a provided key matches the garden's edit key.
- * @param userId - ID of the owner.
- * @param key - Provided key to verify.
- * @returns Promise with verification result.
+ * Removes a collaborator from the garden.
  */
-export const verifyGardenKey = async (userId: string, key: string): Promise<boolean> => {
-  if (!key) return false;
-  const profile = await getUserProfile(userId);
-  return profile?.editKey === key;
+export const removeCollaborator = async (gardenId: string, collabId: string): Promise<void> => {
+  const garden = await getGarden(gardenId);
+  if (garden) {
+    const updated = garden.collaboratorIds.filter((id) => id !== collabId);
+    await updateGarden(gardenId, { collaboratorIds: updated });
+  }
+};
+
+/**
+ * Deletes a garden and all its associated photos.
+ * @param gardenId - ID of the garden to delete.
+ */
+export const deleteGarden = async (gardenId: string): Promise<void> => {
+  const photos = await getGardenPhotos(gardenId);
+
+  const deletePhotoPromises = photos.map((photo) => deletePhoto(photo.id, photo.path));
+  await Promise.allSettled(deletePhotoPromises);
+  await deleteDoc(doc(db, "gardens", gardenId));
 };

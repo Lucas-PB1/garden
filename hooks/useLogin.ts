@@ -25,7 +25,7 @@ export function useLogin() {
       if (callbackUrl) {
         router.push(callbackUrl);
       } else {
-        router.push("/garden");
+        router.push("/dashboard");
       }
     } catch (err) {
       setError("Falha ao entrar. Verifique suas credenciais.");

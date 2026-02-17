@@ -5,10 +5,10 @@ import Swal from "sweetalert2";
 
 /**
  * Core hook for managing garden photos, including fetching, uploading, and deleting.
- * @param userId - The ID of the garden owner.
+ * @param gardenId - The ID of the specific garden.
  * @returns An object containing photo state and management functions.
  */
-export function useGardenCore(userId: string) {
+export function useGardenCore(gardenId: string) {
   const [photos, setPhotos] = useState<GardenPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loadingPhotos, setLoadingPhotos] = useState(true);
@@ -19,8 +19,9 @@ export function useGardenCore(userId: string) {
    * Refreshes the local photo list from the service.
    */
   const refreshPhotos = async () => {
+    if (!gardenId) return;
     try {
-      const photosData = await getGardenPhotos(userId);
+      const photosData = await getGardenPhotos(gardenId);
       setPhotos(photosData);
     } catch (error) {
       console.error("Error refreshing photos:", error);
@@ -33,13 +34,13 @@ export function useGardenCore(userId: string) {
    * Handles the selection and upload process of a photo.
    * Compresses the image and prompts for a memory date.
    * @param e - React change event from a file input.
+   * @param userId - ID of the uploader.
    * @param uploaderName - Name of the person uploading.
-   * @param editKey - Optional collaborative edit key.
    */
   const handleUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
+    userId: string,
     uploaderName: string,
-    editKey?: string,
   ) => {
     if (e.target.files && e.target.files[0] && userId) {
       setUploading(true);
@@ -64,7 +65,7 @@ export function useGardenCore(userId: string) {
         if (!dateVal) return;
 
         const formattedDate = new Date(dateVal + "T12:00:00").toLocaleDateString();
-        await uploadPhoto(webpFile, userId, formattedDate, uploaderName, editKey);
+        await uploadPhoto(webpFile, gardenId, userId, formattedDate, uploaderName);
         await refreshPhotos();
       } catch (error) {
         console.error("Upload failed", error);

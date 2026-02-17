@@ -50,7 +50,7 @@ export default function SlideshowModal({
     setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % photos.length);
       setAnimating(false);
-    }, 300); // Wait for exit animation
+    }, 300);
   }, [photos.length]);
 
   const prevSlide = useCallback(() => {
@@ -70,7 +70,6 @@ export default function SlideshowModal({
     return () => clearInterval(interval);
   }, [isPlaying, nextSlide, animating]);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") nextSlide();
@@ -111,10 +110,10 @@ export default function SlideshowModal({
       {/* Main Content */}
       <div className="relative w-full h-full flex flex-col items-center justify-center p-0 md:p-0 overflow-hidden pointer-events-none">
         {/* Visual wrapper with padding to clear controls */}
-        <div className="w-full h-full flex items-center justify-center p-4 pb-20 pt-16 md:p-24">
+        <div className="w-full h-full flex items-center justify-center p-4 pb-24 pt-20 md:p-12">
           <div
             key={currentIndex}
-            className={`relative max-w-full max-h-full flex items-center justify-center transition-all duration-500 transform ${animating
+            className={`relative w-full h-full md:max-w-5xl md:max-h-[85vh] flex items-center justify-center transition-all duration-500 transform ${animating
               ? slideDirection === "next"
                 ? "-translate-x-10 opacity-0"
                 : "translate-x-10 opacity-0"
@@ -125,8 +124,9 @@ export default function SlideshowModal({
               src={currentPhoto.url}
               alt={currentPhoto.caption}
               fill
-              className="object-contain rounded-xl shadow-2xl pointer-events-auto"
+              className="object-contain rounded-xl shadow-2xl drop-shadow-2xl pointer-events-auto"
               priority
+              sizes="(max-width: 768px) 100vw, 80vw"
             />
           </div>
         </div>
