@@ -1,10 +1,11 @@
 import Image from "next/image";
-import { GardenPhoto } from "@/services/gardenService";
+import { GardenPhoto, GardenTheme } from "@/services/gardenService";
 import { useCallback, useEffect, useState } from "react";
 
 interface SlideshowModalProps {
   photos: GardenPhoto[];
   lovePhrases: string[];
+  theme?: GardenTheme;
   onClose: () => void;
   startIndex?: number;
 }

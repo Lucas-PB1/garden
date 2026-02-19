@@ -269,7 +269,6 @@ export default function GardenPage() {
                     photos={photos}
                     lovePhrases={lovePhrases}
                     theme={garden?.theme}
-                    musicUrl={garden?.musicUrl}
                     onClose={() => setShowSlideshow(false)}
                 />
             )}
