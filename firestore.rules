@@ -1,0 +1,212 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function gardenPath(gardenId) {
+      return /databases/$(database)/documents/gardens/$(gardenId);
+    }
+
+    function gardenExists(gardenId) {
+      return exists(gardenPath(gardenId));
+    }
+
+    function gardenData(gardenId) {
+      return get(gardenPath(gardenId)).data;
+    }
+
+    function isGardenOwner(gardenId) {
+      return signedIn() && gardenExists(gardenId) && gardenData(gardenId).ownerId == request.auth.uid;
+    }
+
+    function canAccessGarden(gardenId) {
+      return signedIn()
+        && gardenExists(gardenId)
+        && (
+          gardenData(gardenId).ownerId == request.auth.uid
+          || request.auth.uid in gardenData(gardenId).collaboratorIds
+        );
+    }
+
+    function isHexColor(value) {
+      return value is string && value.matches('^#[0-9a-fA-F]{6}$');
+    }
+
+    function isValidTheme(theme) {
+      return theme is map
+        && theme.keys().hasOnly(['primaryColor', 'secondaryColor', 'bgType', 'customBgUrl'])
+        && isHexColor(theme.primaryColor)
+        && isHexColor(theme.secondaryColor)
+        && theme.bgType in ['floral', 'stars', 'minimalist', 'custom']
+        && (
+          !theme.keys().hasAny(['customBgUrl'])
+          || (
+            theme.customBgUrl is string
+            && theme.customBgUrl.size() <= 2048
+            && theme.customBgUrl.matches('^https://.+')
+          )
+        );
+    }
+
+    function isValidGardenDocument(data) {
+      return data.keys().hasOnly([
+          'ownerId',
+          'name',
+          'theme',
+          'specialDate',
+          'specialDateTitle',
+          'lovePhrases',
+          'collaboratorIds',
+          'createdAt'
+        ])
+        && data.keys().hasAll(['ownerId', 'name', 'theme', 'collaboratorIds', 'createdAt'])
+        && data.ownerId is string
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 80
+        && isValidTheme(data.theme)
+        && data.collaboratorIds is list
+        && data.collaboratorIds.size() <= 50
+        && data.createdAt is timestamp
+        && (
+          !data.keys().hasAny(['specialDate'])
+          || data.specialDate == null
+          || data.specialDate is timestamp
+        )
+        && (
+          !data.keys().hasAny(['specialDateTitle'])
+          || (data.specialDateTitle is string && data.specialDateTitle.size() <= 80)
+        )
+        && (
+          !data.keys().hasAny(['lovePhrases'])
+          || (data.lovePhrases is list && data.lovePhrases.size() <= 80)
+        );
+    }
+
+    function isValidGardenCreate() {
+      return signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && isValidGardenDocument(request.resource.data);
+    }
+
+    function isValidGardenUpdate() {
+      return signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name',
+          'theme',
+          'specialDate',
+          'specialDateTitle',
+          'lovePhrases',
+          'collaboratorIds'
+        ])
+        && isValidGardenDocument(request.resource.data);
+    }
+
+    function isValidPhotoCreate(data) {
+      return signedIn()
+        && data.keys().hasOnly([
+          'gardenId',
+          'userId',
+          'url',
+          'path',
+          'caption',
+          'createdAt',
+          'uploadedBy',
+          'uploaderName'
+        ])
+        && data.keys().hasAll([
+          'gardenId',
+          'userId',
+          'url',
+          'path',
+          'caption',
+          'createdAt',
+          'uploadedBy',
+          'uploaderName'
+        ])
+        && data.gardenId is string
+        && data.userId == request.auth.uid
+        && data.uploadedBy == request.auth.uid
+        && data.url is string
+        && data.url.size() <= 2048
+        && data.path is string
+        && data.path.matches('^gardens/' + data.gardenId + '/photos/' + request.auth.uid + '/[^/]+\\.webp$')
+        && data.caption is string
+        && data.caption.size() <= 80
+        && data.uploaderName is string
+        && data.uploaderName.size() <= 80
+        && data.createdAt == request.time
+        && canAccessGarden(data.gardenId);
+    }
+
+    function canDeletePhoto() {
+      return signedIn()
+        && (
+          isGardenOwner(resource.data.gardenId)
+          || resource.data.uploadedBy == request.auth.uid
+        );
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasOnly(['displayName', 'photoURL', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['displayName', 'createdAt', 'updatedAt'])
+        && data.displayName is string
+        && data.displayName.size() > 0
+        && data.displayName.size() <= 80
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && (
+          !data.keys().hasAny(['photoURL'])
+          || (data.photoURL is string && data.photoURL.size() <= 2048)
+        );
+    }
+
+    match /gardens/{gardenId} {
+      allow create: if isValidGardenCreate();
+      allow read: if signedIn()
+        && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.collaboratorIds);
+      allow update: if isValidGardenUpdate();
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /photos/{photoId} {
+      allow read: if canAccessGarden(resource.data.gardenId);
+      allow create: if isValidPhotoCreate(request.resource.data);
+      allow update: if false;
+      allow delete: if canDeletePhoto();
+    }
+
+    match /users/{userId} {
+      allow create: if isSelf(userId)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && isValidUserProfile(request.resource.data);
+      allow read: if isSelf(userId);
+      allow update: if isSelf(userId)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName',
+          'photoURL',
+          'updatedAt'
+        ])
+        && isValidUserProfile(request.resource.data);
+      allow delete: if isSelf(userId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

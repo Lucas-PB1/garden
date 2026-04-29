@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function gardenPath(gardenId) {
+      return /databases/(default)/documents/gardens/$(gardenId);
+    }
+
+    function gardenExists(gardenId) {
+      return firestore.exists(gardenPath(gardenId));
+    }
+
+    function gardenData(gardenId) {
+      return firestore.get(gardenPath(gardenId)).data;
+    }
+
+    function isGardenOwner(gardenId) {
+      return signedIn() && gardenExists(gardenId) && gardenData(gardenId).ownerId == request.auth.uid;
+    }
+
+    function canAccessGarden(gardenId) {
+      return signedIn()
+        && gardenExists(gardenId)
+        && (
+          gardenData(gardenId).ownerId == request.auth.uid
+          || request.auth.uid in gardenData(gardenId).collaboratorIds
+        );
+    }
+
+    function isValidImageUpload(fileName) {
+      return request.resource != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType == 'image/webp'
+        && fileName.matches('^[A-Za-z0-9._-]+\\.webp$');
+    }
+
+    match /gardens/{gardenId}/photos/{uploaderId}/{fileName} {
+      allow read: if canAccessGarden(gardenId);
+      allow create: if canAccessGarden(gardenId)
+        && request.auth.uid == uploaderId
+        && isValidImageUpload(fileName);
+      allow update: if false;
+      allow delete: if isGardenOwner(gardenId) || (signedIn() && request.auth.uid == uploaderId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

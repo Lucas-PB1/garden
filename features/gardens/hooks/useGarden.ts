@@ -1,19 +1,26 @@
 import { useAuth } from "@/context/AuthContext";
+import { MAX_PHRASES_IMPORT_BYTES } from "@/features/gardens/constants";
 import {
   addCollaborator,
   Garden,
   GardenTheme,
   getGarden,
   removeCollaborator,
-  updateGarden,
   updateGardenName,
+  updateGardenTheme,
   updateLovePhrases,
   updateSpecialDate,
-} from "@/services/gardenService";
+} from "@/features/gardens/services/gardenService";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { useGardenCore } from "./useGardenCore";
+
+const parseGardenDate = (date: Garden["specialDate"]) => {
+  if (!date) return null;
+  if (typeof date === "object" && "seconds" in date) return new Date(date.seconds * 1000);
+  return new Date(date);
+};
 
 /**
  * Hook for managing a specific garden's view and settings.
@@ -37,7 +44,7 @@ export function useGarden(gardenId: string) {
   } = useGardenCore(gardenId);
 
   const [garden, setGarden] = useState<Garden | null>(null);
-  const [editKey, setEditKey] = useState<string | null>(null);
+  const [loadingGarden, setLoadingGarden] = useState(true);
   const [gardenName, setGardenName] = useState("Carregando...");
   const [isOwner, setIsOwner] = useState(false);
   const [isCollaborator, setIsCollaborator] = useState(false);
@@ -53,40 +60,66 @@ export function useGarden(gardenId: string) {
   const [showPhrasesModal, setShowPhrasesModal] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) router.push("/login");
-  }, [user, loading, router]);
+    if (!loading && !user) {
+      router.replace(`/login?callbackUrl=${encodeURIComponent(`/garden/${gardenId}`)}`);
+    }
+  }, [gardenId, user, loading, router]);
 
   useEffect(() => {
-    async function fetchData() {
-      if (gardenId && user) {
-        try {
-          await refreshPhotos();
-          const gardenData = await getGarden(gardenId);
-          if (gardenData) {
-            setGarden(gardenData);
-            setGardenName(gardenData.name);
-            setSpecialDate(
-              gardenData.specialDate
-                ? typeof gardenData.specialDate === "object" && "seconds" in gardenData.specialDate
-                  ? new Date(gardenData.specialDate.seconds * 1000)
-                  : new Date(gardenData.specialDate)
-                : null,
-            );
-            setSpecialDateTitle(gardenData.specialDateTitle || "Data Especial");
-            setLovePhrases(gardenData.lovePhrases || []);
+    let active = true;
 
-            setIsOwner(gardenData.ownerId === user.uid);
-            setIsCollaborator(gardenData.collaboratorIds.includes(user.uid) || gardenData.ownerId === user.uid);
-          } else {
-            router.push("/dashboard");
-          }
-        } catch (error) {
-          console.error("Error fetching garden data:", error);
+    async function fetchData() {
+      if (loading) return;
+      if (!gardenId || !user) {
+        if (active) setLoadingGarden(false);
+        return;
+      }
+
+      setLoadingGarden(true);
+      try {
+        const gardenData = await getGarden(gardenId);
+        if (!active) return;
+
+        if (!gardenData) {
+          router.replace("/dashboard");
+          return;
+        }
+
+        const owner = gardenData.ownerId === user.uid;
+        const collaborator = gardenData.collaboratorIds.includes(user.uid);
+
+        if (!owner && !collaborator) {
+          router.replace("/dashboard");
+          return;
+        }
+
+        await refreshPhotos();
+        if (!active) return;
+
+        setGarden(gardenData);
+        setGardenName(gardenData.name);
+        setSpecialDate(parseGardenDate(gardenData.specialDate));
+        setSpecialDateTitle(gardenData.specialDateTitle || "Data Especial");
+        setLovePhrases(gardenData.lovePhrases || []);
+        setIsOwner(owner);
+        setIsCollaborator(owner || collaborator);
+      } catch (error) {
+        console.error("Error fetching garden data:", error);
+        if (active) {
+          router.replace("/dashboard");
+        }
+      } finally {
+        if (active) {
+          setLoadingGarden(false);
         }
       }
     }
+
     fetchData();
-  }, [user, gardenId]);
+    return () => {
+      active = false;
+    };
+  }, [gardenId, loading, refreshPhotos, router, user]);
 
   /**
    * Handles file selection and triggers the upload process using the current user's name.
@@ -94,7 +127,7 @@ export function useGarden(gardenId: string) {
    */
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (user && gardenId) {
-      handleUpload(e, user.uid, user.displayName || "Cozinheiro Especial");
+      handleUpload(e, user.uid, user.displayName || "Pessoa especial");
     }
   };
 
@@ -104,39 +137,18 @@ export function useGarden(gardenId: string) {
   }));
 
   /**
-   * Copies the public view-only link to the clipboard.
-   */
-  const copyViewLink = () => {
-    if (user) {
-      navigator.clipboard.writeText(`${window.location.origin}/garden/${user.uid}`);
-      setShowShareModal(false);
-      Swal.fire("Sucesso", "Link de visualização copiado!", "success");
-    }
-  };
-
-  /**
-   * Copies the collaborative edit link to the clipboard.
-   */
-  const copyEditLink = () => {
-    if (user && editKey) {
-      navigator.clipboard.writeText(`${window.location.origin}/garden/${user.uid}?key=${editKey}`);
-      setShowShareModal(false);
-      Swal.fire("Sucesso", "Link de colaboração copiado!", "success");
-    }
-  };
-
-  /**
    * Saves the updated garden name to the user's profile.
    */
   const saveName = async () => {
     if (gardenId && tempName.trim()) {
       const newName = tempName.trim();
-      setGardenName(newName);
       setIsEditingName(false);
       try {
         await updateGardenName(gardenId, newName);
+        setGardenName(newName);
+        setGarden((prev) => (prev ? { ...prev, name: newName } : prev));
       } catch {
-        console.error("Failed to save name");
+        Swal.fire("Erro", "Falha ao salvar nome.", "error");
       }
     } else {
       setIsEditingName(false);
@@ -168,6 +180,12 @@ export function useGarden(gardenId: string) {
    */
   const handlePhrasesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0] && gardenId) {
+      if (e.target.files[0].size > MAX_PHRASES_IMPORT_BYTES) {
+        Swal.fire("Erro", "Envie um JSON de frases de até 256 KB.", "error");
+        e.target.value = "";
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
@@ -176,7 +194,7 @@ export function useGarden(gardenId: string) {
             const valid = phrases.filter((p) => typeof p === "string");
             await updateLovePhrases(gardenId, valid);
             setLovePhrases(valid);
-            Swal.fire("Sucesso", "Frases atualizadas! ❤️", "success");
+            Swal.fire("Sucesso", "Frases atualizadas.", "success");
           }
         } catch {
           Swal.fire("Erro", "JSON inválido.", "error");
@@ -201,14 +219,47 @@ export function useGarden(gardenId: string) {
 
   const handleUpdateTheme = async (theme: GardenTheme) => {
     if (gardenId) {
-      await updateGarden(gardenId, { theme });
+      await updateGardenTheme(gardenId, theme);
       setGarden((prev) => (prev ? { ...prev, theme } : null));
     }
   };
 
+  const inviteCollaborator = useCallback(
+    async (collaboratorId: string) => {
+      await addCollaborator(gardenId, collaboratorId);
+      setGarden((prev) =>
+        prev
+          ? {
+              ...prev,
+              collaboratorIds: Array.from(
+                new Set([...prev.collaboratorIds, collaboratorId.trim()]),
+              ),
+            }
+          : prev,
+      );
+    },
+    [gardenId],
+  );
+
+  const removeGardenCollaborator = useCallback(
+    async (collaboratorId: string) => {
+      await removeCollaborator(gardenId, collaboratorId);
+      setGarden((prev) =>
+        prev
+          ? {
+              ...prev,
+              collaboratorIds: prev.collaboratorIds.filter((id) => id !== collaboratorId),
+            }
+          : prev,
+      );
+    },
+    [gardenId],
+  );
+
   return {
     user,
     loading,
+    loadingGarden,
     garden,
     photos: photosWithPhrases,
     uploading,
@@ -228,9 +279,9 @@ export function useGarden(gardenId: string) {
       setIsEditingName(true);
     },
     saveName,
-    handleKeyDown: (_: React.KeyboardEvent) => {
-      if (_.key === "Enter") saveName();
-      if (_.key === "Escape") setIsEditingName(false);
+    handleKeyDown: (event: React.KeyboardEvent) => {
+      if (event.key === "Enter") saveName();
+      if (event.key === "Escape") setIsEditingName(false);
     },
     showShareModal,
     setShowShareModal,
@@ -246,7 +297,7 @@ export function useGarden(gardenId: string) {
     setShowPhrasesModal,
     handleSavePhrases,
     updateTheme: handleUpdateTheme,
-    inviteCollaborator: (collabId: string) => addCollaborator(gardenId, collabId),
-    removeCollaborator: (collabId: string) => removeCollaborator(gardenId, collabId),
+    inviteCollaborator,
+    removeCollaborator: removeGardenCollaborator,
   };
 }

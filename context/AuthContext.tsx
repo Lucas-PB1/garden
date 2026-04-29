@@ -1,9 +1,17 @@
 "use client";
 
 import { auth } from "@/lib/firebase/firebase";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 /**
  * Interface for the global authentication state.
@@ -17,7 +25,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  logout: async () => { },
+  logout: async () => {},
 });
 
 /**
@@ -36,11 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser(user);
-      } else {
-        setUser(null);
-      }
+      setUser(user);
       setLoading(false);
     });
 
@@ -50,18 +54,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   /**
    * Logs out the current user and redirects to the login page.
    */
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await signOut(auth);
       router.push("/login");
     } catch (error) {
       console.error("Failed to log out", error);
     }
-  };
+  }, [router]);
 
-  return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  const value = useMemo(() => ({ user, loading, logout }), [user, loading, logout]);
+
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };

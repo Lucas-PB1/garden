@@ -1,48 +1,19 @@
+# Firebase Rules
 
-// Firestore Rules
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    function canAccessGarden(gardenId) {
-      let garden = get(/databases/$(database)/documents/gardens/$(gardenId)).data;
-      return garden.ownerId == request.auth.uid || request.auth.uid in garden.collaboratorIds;
-    }
+Use `firestore.rules` and `storage.rules` as the deployable source of truth.
+This file is kept as a quick reference for the current security model.
 
-    function isGardenOwner(gardenId) {
-      let garden = get(/databases/$(database)/documents/gardens/$(gardenId)).data;
-      return garden.ownerId == request.auth.uid;
-    }
+## Firestore
 
-    match /gardens/{gardenId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.collaboratorIds);
-      allow update: if request.auth != null && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.collaboratorIds);
-      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
-    }
+- `gardens`: only authenticated owners can create/update/delete gardens. Owners and collaborators can read.
+- `photos`: owners and collaborators can read/create through an existing garden; only the garden owner or the uploader can delete; updates are denied.
+- `users`: profile documents are private to the authenticated user.
+- Unknown collections are denied.
 
-    match /photos/{photoId} {
-      allow read: if request.auth != null && canAccessGarden(resource.data.gardenId);
-      allow create: if request.auth != null && canAccessGarden(request.resource.data.gardenId);
-      allow delete: if request.auth != null && canAccessGarden(resource.data.gardenId);
-    }
+## Storage
 
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
-
-// Storage Rules
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /gardens/{userId}/{allPaths=**} {
-       allow read: if true;
-       allow write: if request.auth != null && request.auth.uid == userId
-                    ||
-                    firestore.get(/databases/(default)/documents/users/$(userId)).data.editKey == request.resource.metadata.editKey;
-    }
-  }
-}
+- Photos live under `gardens/{gardenId}/photos/{uploaderId}/{fileName}.webp`.
+- Owners and collaborators can read objects for gardens they can access.
+- Uploads require an authenticated collaborator/owner, WebP content type, a matching uploader path, and a maximum size of 10 MB.
+- Garden owners can delete any garden photo object; uploaders can delete their own objects.
+- Unknown paths are denied.

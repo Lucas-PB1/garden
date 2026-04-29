@@ -1,186 +1,353 @@
 "use client";
 
-import GardenLayout from "@/components/GardenLayout";
 import { useAuth } from "@/context/AuthContext";
-import { useGardenDashboard } from "@/hooks/useGardenDashboard";
-import { createGarden, deleteGarden } from "@/services/gardenService";
+import UserAccountSection from "@/features/auth/components/UserAccountSection";
+import { useGoogleAccountLink } from "@/features/auth/hooks/useGoogleAccountLink";
+import { updateUserDisplayName } from "@/features/auth/services/authService";
+import GardenLayout from "@/features/gardens/components/GardenLayout";
+import { useGardenDashboard } from "@/features/gardens/hooks/useGardenDashboard";
+import { createGarden, deleteGarden } from "@/features/gardens/services/gardenService";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { FaArrowRight, FaPlus, FaTrash } from "react-icons/fa";
 import Swal from "sweetalert2";
-import { FaCopy, FaTrash } from "react-icons/fa";
+
+const filterOptions = [
+  { id: "all", label: "Todos" },
+  { id: "mine", label: "Meus" },
+  { id: "shared", label: "Compartilhados" },
+] as const;
+
+const getThemeLabel = (bgType: string) => {
+  if (bgType === "stars") return "Noite";
+  if (bgType === "minimalist") return "Minimalista";
+  if (bgType === "custom") return "Capa personalizada";
+  return "Floral";
+};
 
 export default function DashboardPage() {
-    const { user, loading: authLoading } = useAuth();
-    const { gardens, loading: gardensLoading, filter, setFilter, refreshDashboard } = useGardenDashboard(user?.uid);
-    const [creating, setCreating] = useState(false);
+  const { user, loading: authLoading, logout } = useAuth();
+  const {
+    gardens,
+    loading: gardensLoading,
+    filter,
+    setFilter,
+    refreshDashboard,
+  } = useGardenDashboard(user?.uid);
+  const { isGoogleLinked, linkingGoogle, linkGoogleAccount } = useGoogleAccountLink(user);
+  const [creating, setCreating] = useState(false);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const router = useRouter();
 
-    const handleCreateGarden = async () => {
-        if (!user) return;
+  const ownedCount = useMemo(
+    () => gardens.filter((garden) => garden.ownerId === user?.uid).length,
+    [gardens, user?.uid],
+  );
+  const sharedCount = gardens.length - ownedCount;
 
-        const { value: name } = await Swal.fire({
-            title: "Nome do seu novo Jardim",
-            input: "text",
-            inputPlaceholder: "Ex: Nossas Memórias",
-            showCancelButton: true,
-            confirmButtonColor: "#ec4899",
-            confirmButtonText: "Criar",
-        });
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login?callbackUrl=/dashboard");
+    }
+  }, [authLoading, router, user]);
 
-        if (name) {
-            setCreating(true);
-            try {
-                await createGarden(user.uid, name);
-                await refreshDashboard();
-                Swal.fire("Sucesso", "Jardim criado com sucesso!", "success");
-            } catch (error) {
-                Swal.fire("Erro", "Não foi possível criar o jardim.", "error");
-            } finally {
-                setCreating(false);
-            }
-        }
-    };
+  useEffect(() => {
+    if (!user) return;
+    setDisplayName(user.displayName || user.email?.split("@")[0] || "Usuário Garden");
+  }, [user]);
 
-    const handleDeleteGarden = async (gardenId: string, gardenName: string) => {
-        const result = await Swal.fire({
-            title: `Excluir "${gardenName}"?`,
-            text: "Você tem certeza? Todas as fotos serão apagadas para sempre. Não há como desfazer.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#ef4444",
-            cancelButtonColor: "#cbd5e1",
-            confirmButtonText: "Sim, excluir",
-            cancelButtonText: "Cancelar"
-        });
+  const handleCreateGarden = async () => {
+    if (!user) return;
 
-        if (result.isConfirmed) {
-            try {
-                Swal.showLoading();
-                await deleteGarden(gardenId);
-                await refreshDashboard();
-                Swal.fire("Excluído!", "O jardim foi removido.", "success");
-            } catch (error) {
-                console.error(error);
-                Swal.fire("Erro", "Falha ao excluir o jardim.", "error");
-            }
-        }
-    };
+    const { value: name } = await Swal.fire({
+      title: "Nome da coleção",
+      input: "text",
+      inputPlaceholder: "Ex: Dia dos Namorados 2026",
+      showCancelButton: true,
+      confirmButtonColor: "#be123c",
+      confirmButtonText: "Criar coleção",
+      cancelButtonText: "Cancelar",
+      inputValidator: (value) => {
+        if (!value.trim()) return "Informe um nome para a coleção.";
+        if (value.trim().length > 80) return "Use até 80 caracteres.";
+        return null;
+      },
+    });
 
-    const copyUserId = () => {
-        if (user?.uid) {
-            navigator.clipboard.writeText(user.uid);
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'ID copiado!',
-                showConfirmButton: false,
-                timer: 1500
-            });
-        }
-    };
+    if (typeof name === "string" && name.trim()) {
+      setCreating(true);
+      try {
+        await createGarden(user.uid, name.trim());
+        await refreshDashboard();
+        Swal.fire("Coleção criada", "Seu novo espaço já está pronto.", "success");
+      } catch (error) {
+        console.error(error);
+        Swal.fire("Erro", "Não foi possível criar a coleção.", "error");
+      } finally {
+        setCreating(false);
+      }
+    }
+  };
 
-    if (authLoading || (gardensLoading && gardens.length === 0)) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-pink-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-400"></div>
-            </div>
-        );
+  const handleDeleteGarden = async (gardenId: string, gardenName: string) => {
+    const result = await Swal.fire({
+      title: `Excluir "${gardenName}"?`,
+      text: "As fotos dessa coleção serão apagadas. Essa ação não pode ser desfeita.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#cbd5e1",
+      confirmButtonText: "Excluir",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        Swal.showLoading();
+        await deleteGarden(gardenId);
+        await refreshDashboard();
+        Swal.fire("Excluída", "A coleção foi removida.", "success");
+      } catch (error) {
+        console.error(error);
+        Swal.fire("Erro", "Falha ao excluir a coleção.", "error");
+      }
+    }
+  };
+
+  const copyUserId = () => {
+    if (user?.uid) {
+      navigator.clipboard.writeText(user.uid);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "ID copiado",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    }
+  };
+
+  const handleEditDisplayName = async () => {
+    if (!user) return;
+
+    const { value } = await Swal.fire({
+      title: "Editar nome",
+      input: "text",
+      inputValue: displayName,
+      inputPlaceholder: "Nome exibido",
+      showCancelButton: true,
+      confirmButtonColor: "#be123c",
+      confirmButtonText: "Salvar",
+      cancelButtonText: "Cancelar",
+      inputValidator: (name) => {
+        if (!name.trim()) return "Informe um nome.";
+        if (name.trim().length > 80) return "Use até 80 caracteres.";
+        return null;
+      },
+    });
+
+    if (typeof value !== "string") return;
+
+    setUpdatingProfile(true);
+    try {
+      const nextDisplayName = await updateUserDisplayName(user, value);
+      setDisplayName(nextDisplayName);
+      Swal.fire("Nome atualizado", "Seus dados foram salvos.", "success");
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Erro", "Não foi possível atualizar seu nome.", "error");
+    } finally {
+      setUpdatingProfile(false);
+    }
+  };
+
+  const handleLinkGoogleAccount = async () => {
+    const result = await linkGoogleAccount();
+
+    if (result.ok) {
+      Swal.fire({
+        icon: "success",
+        title: result.alreadyLinked ? "Google já vinculado" : "Conta vinculada",
+        text: result.alreadyLinked
+          ? "Sua conta já podia entrar com Google."
+          : "Agora você também pode entrar usando sua conta Google.",
+        confirmButtonColor: "#16a34a",
+      });
+      return;
     }
 
+    Swal.fire({
+      icon: "error",
+      title: "Não foi possível vincular",
+      text: result.message,
+      confirmButtonColor: "#be123c",
+    });
+  };
+
+  const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: "Sair da conta?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#be123c",
+      cancelButtonColor: "#cbd5e1",
+      confirmButtonText: "Sair",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (result.isConfirmed) {
+      await logout();
+    }
+  };
+
+  if (authLoading || !user || (gardensLoading && gardens.length === 0)) {
     return (
-        <GardenLayout>
-            <div className="max-w-6xl mx-auto py-8">
-                <header className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
-                    <div>
-                        <h1 className="text-4xl font-serif font-bold text-gray-800">Seus Jardins</h1>
-                        <p className="text-gray-500 mt-2">Gerencie e cultive suas coleções de memórias</p>
-
-                        {user && (
-                            <div className="mt-4 flex items-center gap-2 bg-pink-50 w-fit px-3 py-1.5 rounded-lg border border-pink-100">
-                                <span className="text-xs text-pink-400 font-bold uppercase tracking-wider">Seu ID:</span>
-                                <code className="text-xs text-gray-600 font-mono">{user.uid}</code>
-                                <button
-                                    onClick={copyUserId}
-                                    className="ml-2 text-pink-400 hover:text-pink-600 transition"
-                                    title="Copiar ID"
-                                >
-                                    <FaCopy />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="bg-white rounded-full p-1 border border-pink-100 shadow-sm flex">
-                            <button
-                                onClick={() => setFilter("all")}
-                                className={`px-4 py-2 rounded-full text-sm font-bold transition ${filter === 'all' ? 'bg-pink-500 text-white' : 'text-gray-500 hover:text-pink-400'}`}
-                            >
-                                Todos
-                            </button>
-                            <button
-                                onClick={() => setFilter("mine")}
-                                className={`px-4 py-2 rounded-full text-sm font-bold transition ${filter === 'mine' ? 'bg-pink-500 text-white' : 'text-gray-500 hover:text-pink-400'}`}
-                            >
-                                Meus
-                            </button>
-                            <button
-                                onClick={() => setFilter("shared")}
-                                className={`px-4 py-2 rounded-full text-sm font-bold transition ${filter === 'shared' ? 'bg-pink-500 text-white' : 'text-gray-500 hover:text-pink-400'}`}
-                            >
-                                Compartilhados
-                            </button>
-                        </div>
-
-                        <button
-                            onClick={handleCreateGarden}
-                            disabled={creating}
-                            className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold shadow-lg hover:shadow-pink-500/30 transition transform hover:-translate-y-1 active:translate-y-0"
-                        >
-                            + Novo Jardim
-                        </button>
-                    </div>
-                </header>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {gardens.map((garden) => (
-                        <Link href={`/garden/${garden.id}`} key={garden.id} className="group">
-                            <div className="bg-white rounded-3xl p-8 border border-pink-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgb(236,72,153,0.1)] transition-all duration-500 transform group-hover:-translate-y-2 h-full flex flex-col items-center text-center relative">
-                                {garden.ownerId === user?.uid && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.preventDefault(); // Prevent Link navigation
-                                            handleDeleteGarden(garden.id, garden.name);
-                                        }}
-                                        className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition p-2 z-10"
-                                        title="Excluir Jardim"
-                                    >
-                                        <FaTrash />
-                                    </button>
-                                )}
-                                <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition duration-500">
-                                    {garden.theme.bgType === 'stars' ? '✨' : garden.theme.bgType === 'floral' ? '🌸' : '🌿'}
-                                </div>
-                                <h3 className="text-2xl font-serif font-bold text-gray-800 mb-2">{garden.name}</h3>
-                                <p className="text-sm text-gray-400 mb-6 italic">
-                                    {garden.ownerId === user?.uid ? "Dono" : "Colaborador"}
-                                </p>
-                                <div className="mt-auto w-full pt-4 border-t border-pink-50 flex justify-center text-pink-400 text-sm font-bold group-hover:text-pink-600">
-                                    Entrar no Jardim →
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
-
-                    {gardens.length === 0 && !gardensLoading && (
-                        <div className="col-span-full py-20 bg-white/30 backdrop-blur-sm rounded-3xl border-2 border-dashed border-pink-200 flex flex-col items-center justify-center text-pink-300">
-                            <span className="text-6xl mb-4">🌱</span>
-                            <p className="text-xl font-bold">Nenhum jardim encontrado</p>
-                            <p className="text-sm">Clique em "+ Novo Jardim" para começar sua primeira coleção</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </GardenLayout>
+      <div className="flex min-h-screen items-center justify-center bg-rose-50">
+        <div className="h-12 w-12 animate-spin rounded-full border-2 border-rose-200 border-t-rose-700" />
+      </div>
     );
+  }
+
+  return (
+    <GardenLayout>
+      <div className="mx-auto max-w-7xl px-2 py-8 md:px-0">
+        <header className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <span className="mb-3 inline-flex rounded-full border border-rose-100 bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-rose-500">
+              Dia dos Namorados
+            </span>
+            <h1 className="text-4xl font-semibold tracking-tight text-stone-950 md:text-5xl">
+              Coleções para guardar o que fica
+            </h1>
+            <p className="mt-3 text-base leading-7 text-stone-600">
+              Organize fotos, datas e frases em espaços privados para vocês dois.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex rounded-lg border border-rose-100 bg-white/85 p-1 shadow-sm">
+              {filterOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setFilter(option.id)}
+                  className={`rounded-md px-3 py-2 text-sm font-semibold transition ${
+                    filter === option.id
+                      ? "bg-rose-900 text-white shadow-sm"
+                      : "text-stone-500 hover:bg-rose-50 hover:text-rose-700"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCreateGarden}
+              disabled={creating}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-900 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-rose-950/10 transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <FaPlus />
+              {creating ? "Criando..." : "Nova coleção"}
+            </button>
+          </div>
+        </header>
+
+        <UserAccountSection
+          user={user}
+          displayName={displayName}
+          gardensCount={gardens.length}
+          ownedCount={ownedCount}
+          sharedCount={sharedCount}
+          isGoogleLinked={isGoogleLinked}
+          linkingGoogle={linkingGoogle}
+          updatingProfile={updatingProfile}
+          onCopyUserId={copyUserId}
+          onEditDisplayName={handleEditDisplayName}
+          onLinkGoogle={handleLinkGoogleAccount}
+          onLogout={handleLogout}
+        />
+
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-stone-950">Suas coleções</h2>
+            <span className="text-sm font-medium text-stone-500">
+              {gardens.length} {gardens.length === 1 ? "coleção" : "coleções"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {gardens.map((garden) => (
+              <Link href={`/garden/${garden.id}`} key={garden.id} className="group">
+                <article className="relative flex h-full min-h-[220px] flex-col rounded-lg border border-rose-100 bg-white/88 p-5 shadow-[0_18px_60px_rgba(127,29,29,0.07)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(127,29,29,0.12)]">
+                  {garden.ownerId === user.uid && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        handleDeleteGarden(garden.id, garden.name);
+                      }}
+                      className="absolute right-4 top-4 rounded-md p-2 text-stone-300 transition hover:bg-red-50 hover:text-red-600"
+                      title="Excluir coleção"
+                    >
+                      <FaTrash />
+                    </button>
+                  )}
+
+                  <div
+                    className="mb-5 h-2 w-20 rounded-full"
+                    style={{
+                      background: `linear-gradient(90deg, ${garden.theme.primaryColor}, ${garden.theme.secondaryColor})`,
+                    }}
+                  />
+
+                  <div className="mb-4 flex flex-wrap gap-2 pr-10">
+                    <span className="rounded-full border border-rose-100 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                      {garden.ownerId === user.uid ? "Dono" : "Colaborador"}
+                    </span>
+                    <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600">
+                      {getThemeLabel(garden.theme.bgType)}
+                    </span>
+                  </div>
+
+                  <h3 className="text-2xl font-semibold leading-tight text-stone-950">
+                    {garden.name}
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-stone-500">
+                    Fotos, contador e frases reunidos em uma coleção privada.
+                  </p>
+
+                  <div className="mt-auto flex items-center justify-between border-t border-rose-100 pt-4 text-sm font-bold text-rose-700">
+                    <span>Abrir coleção</span>
+                    <FaArrowRight className="transition group-hover:translate-x-1" />
+                  </div>
+                </article>
+              </Link>
+            ))}
+
+            {gardens.length === 0 && !gardensLoading && (
+              <div className="col-span-full rounded-lg border border-dashed border-rose-200 bg-white/70 px-6 py-14 text-center">
+                <p className="text-xl font-semibold text-stone-950">Nenhuma coleção ainda</p>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-500">
+                  Crie um espaço para reunir as fotos, datas e detalhes que fazem sentido para
+                  vocês.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCreateGarden}
+                  className="mt-6 inline-flex items-center gap-2 rounded-lg bg-rose-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-rose-800"
+                >
+                  <FaPlus />
+                  Criar primeira coleção
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </GardenLayout>
+  );
 }
