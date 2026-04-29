@@ -10,6 +10,16 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    function entitlementPath(userId) {
+      return /databases/$(database)/documents/entitlements/$(userId);
+    }
+
+    function hasActiveEntitlement() {
+      return signedIn()
+        && exists(entitlementPath(request.auth.uid))
+        && get(entitlementPath(request.auth.uid)).data.active == true;
+    }
+
     function gardenPath(gardenId) {
       return /databases/$(database)/documents/gardens/$(gardenId);
     }
@@ -92,6 +102,7 @@ service cloud.firestore {
 
     function isValidGardenCreate() {
       return signedIn()
+        && hasActiveEntitlement()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.createdAt == request.time
         && isValidGardenDocument(request.resource.data);
@@ -203,6 +214,19 @@ service cloud.firestore {
         ])
         && isValidUserProfile(request.resource.data);
       allow delete: if isSelf(userId);
+    }
+
+    match /entitlements/{userId} {
+      allow read: if isSelf(userId);
+      allow write: if false;
+    }
+
+    match /orders/{orderId} {
+      allow read, write: if false;
+    }
+
+    match /commerce/{documentId} {
+      allow read, write: if false;
     }
 
     match /{document=**} {

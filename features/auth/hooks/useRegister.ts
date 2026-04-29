@@ -4,6 +4,23 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signInWithGoogle, upsertUserProfile } from "../services/authService";
 
+const getSafeCallbackUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  const callbackUrl = params.get("callbackUrl");
+
+  if (!callbackUrl || !callbackUrl.startsWith("/") || callbackUrl.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  try {
+    const url = new URL(callbackUrl, window.location.origin);
+    if (url.origin !== window.location.origin) return "/dashboard";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/dashboard";
+  }
+};
+
 /**
  * Hook for managing the registration form state and new user creation.
  * Automatically updates the user's display name upon creation.
@@ -36,7 +53,7 @@ export function useRegister() {
       await updateProfile(userCredential.user, { displayName });
       await upsertUserProfile(userCredential.user, { displayName });
 
-      router.push("/dashboard");
+      router.push(getSafeCallbackUrl());
     } catch (err) {
       const firebaseError = err as { message?: string };
       setError(firebaseError.message || "Falha ao registrar. Tente novamente.");
@@ -51,7 +68,7 @@ export function useRegister() {
 
     try {
       await signInWithGoogle();
-      router.push("/dashboard");
+      router.push(getSafeCallbackUrl());
     } catch (err) {
       setError("Não foi possível continuar com Google. Tente novamente.");
       console.error(err);

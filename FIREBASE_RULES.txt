@@ -5,9 +5,11 @@ This file is kept as a quick reference for the current security model.
 
 ## Firestore
 
-- `gardens`: only authenticated owners can create/update/delete gardens. Owners and collaborators can read.
+- `gardens`: authenticated users can create only with an active server-written entitlement. Owners can update/delete. Owners and collaborators can read.
 - `photos`: owners and collaborators can read/create through an existing garden; only the garden owner or the uploader can delete; updates are denied.
 - `users`: profile documents are private to the authenticated user.
+- `entitlements`: users can read only their own entitlement; client writes are denied.
+- `orders` and `commerce`: client reads/writes are denied; server APIs use service account access.
 - Unknown collections are denied.
 
 ## Storage
