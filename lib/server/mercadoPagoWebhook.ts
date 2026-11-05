@@ -27,10 +27,32 @@ export const getMercadoPagoWebhookPaymentId = (request: NextRequest, payload: We
 export const getMercadoPagoWebhookType = (request: NextRequest, payload: WebhookPayload) =>
   request.nextUrl.searchParams.get("type") || payload.type || "";
 
-export const verifyMercadoPagoWebhookSignature = (request: NextRequest, paymentId: string) => {
-  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+/**
+ * Webhook secrets accepted by this deployment: its own, plus the optional test-mode secret
+ * (production also receives sandbox notifications from preview deployments).
+ */
+const getWebhookSecrets = () =>
+  [process.env.MERCADO_PAGO_WEBHOOK_SECRET, process.env.MERCADO_PAGO_TEST_WEBHOOK_SECRET].filter(
+    (secret): secret is string => Boolean(secret),
+  );
 
-  if (!secret) {
+const signatureMatches = (secret: string, manifest: string, receivedHash: string) => {
+  const expectedBuffer = Buffer.from(
+    createHmac("sha256", secret).update(manifest).digest("hex"),
+    "hex",
+  );
+  const receivedBuffer = Buffer.from(receivedHash, "hex");
+
+  return (
+    expectedBuffer.length === receivedBuffer.length &&
+    timingSafeEqual(expectedBuffer, receivedBuffer)
+  );
+};
+
+export const verifyMercadoPagoWebhookSignature = (request: NextRequest, paymentId: string) => {
+  const secrets = getWebhookSecrets();
+
+  if (secrets.length === 0) {
     return {
       ok:
         process.env.NODE_ENV !== "production" ||
@@ -50,18 +72,12 @@ export const verifyMercadoPagoWebhookSignature = (request: NextRequest, paymentI
     return { ok: false, skipped: false, reason: "missing_signature_parts" };
   }
 
-  const manifest = `id:${paymentId};request-id:${requestId};ts:${timestamp};`;
-  const expectedHash = createHmac("sha256", secret).update(manifest).digest("hex");
-  const expectedBuffer = Buffer.from(expectedHash, "hex");
-  const receivedBuffer = Buffer.from(receivedHash, "hex");
-
-  if (expectedBuffer.length !== receivedBuffer.length) {
-    return { ok: false, skipped: false, reason: "invalid_signature_length" };
+  if (!/^[0-9a-f]+$/i.test(receivedHash)) {
+    return { ok: false, skipped: false, reason: "invalid_signature_format" };
   }
 
-  return {
-    ok: timingSafeEqual(expectedBuffer, receivedBuffer),
-    skipped: false,
-    reason: "verified",
-  };
+  const manifest = `id:${paymentId};request-id:${requestId};ts:${timestamp};`;
+  const ok = secrets.some((secret) => signatureMatches(secret, manifest, receivedHash));
+
+  return { ok, skipped: false, reason: ok ? "verified" : "invalid_signature" };
 };

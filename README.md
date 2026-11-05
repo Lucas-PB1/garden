@@ -77,6 +77,22 @@ The Storage path convention is `gardens/{gardenId}/photos/{uploaderId}/{fileName
 written by the server after Mercado Pago confirms an approved payment with the expected value and
 currency.
 
+## Environments
+
+| Vercel environment | Mercado Pago                                                  | Webhook URL                    |
+| ------------------ | ------------------------------------------------------------- | ------------------------------ |
+| Production         | live credentials, `MERCADO_PAGO_CHECKOUT_URL_MODE=production` | public production URL          |
+| Preview            | test credentials, `MERCADO_PAGO_CHECKOUT_URL_MODE=sandbox`    | also the public production URL |
+
+Previews are protected by Vercel Authentication, so their sandbox notifications go to the
+production webhook. Production therefore also holds `MERCADO_PAGO_TEST_ACCESS_TOKEN` and
+`MERCADO_PAGO_TEST_WEBHOOK_SECRET`: it accepts either signature, looks each payment up with the
+live token first and falls back to the test token. Every order records `liveMode`, and a payment
+whose `live_mode` differs from its order is flagged `mode_mismatch` and never grants access.
+
+Both environments share the same Firebase project, so a test purchase on a preview grants real
+access to that account and the `/admin` price applies to both.
+
 ## Mercado Pago Flow
 
 - `/checkout` creates a server-side order and a Checkout Pro preference.

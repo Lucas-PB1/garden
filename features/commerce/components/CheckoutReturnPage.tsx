@@ -16,6 +16,7 @@ type CheckoutReturnKind = "success" | "pending" | "failure";
 const finalStatuses = new Set([
   "approved",
   "amount_mismatch",
+  "mode_mismatch",
   "rejected",
   "cancelled",
   "refunded",
@@ -33,6 +34,7 @@ const statusLabels: Record<string, string> = {
   refunded: "Reembolsado",
   charged_back: "Contestado",
   amount_mismatch: "Em análise",
+  mode_mismatch: "Em análise",
 };
 
 const getStatusCopy = (kind: CheckoutReturnKind, order: CheckoutOrderStatus | null) => {
@@ -45,11 +47,11 @@ const getStatusCopy = (kind: CheckoutReturnKind, order: CheckoutOrderStatus | nu
     };
   }
 
-  if (order?.status === "amount_mismatch") {
+  if (order?.status === "amount_mismatch" || order?.status === "mode_mismatch") {
     return {
       icon: <FaExclamationTriangle />,
       title: "Pagamento em análise",
-      text: "O valor confirmado não bate com o pedido, então o acesso não foi liberado automaticamente.",
+      text: "O pagamento confirmado não corresponde a este pedido, então o acesso não foi liberado automaticamente.",
       tone: "text-amber-700",
     };
   }
