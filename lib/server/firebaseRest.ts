@@ -36,7 +36,28 @@ const getProjectId = () => {
   return projectId;
 };
 
-const normalizePrivateKey = (privateKey: string) => privateKey.replace(/\\n/g, "\n");
+/**
+ * Normalizes a PEM private key pasted into an environment variable. Handles the common
+ * ways it gets mangled: wrapped in quotes, escaped `\\n`, Windows line endings, or the
+ * whole key collapsed onto a single line with spaces instead of newlines.
+ */
+const normalizePrivateKey = (privateKey: string) => {
+  let key = privateKey.trim();
+
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+
+  key = key.replace(/\\r/g, "").replace(/\\n/g, "\n").replace(/\r\n?/g, "\n").trim();
+
+  const match = key.match(/-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----/);
+  if (!match) return key;
+
+  const [, label, body] = match;
+  const base64 = body.replace(/\s+/g, "");
+  const lines = base64.match(/.{1,64}/g) || [];
+  return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----\n`;
+};
 
 const parseServiceAccountJson = (value: string | undefined) => {
   if (!value) return null;
