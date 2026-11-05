@@ -21,12 +21,54 @@ const getDateObject = (date: SpecialDateCounterProps["date"]) => {
   return new Date(date);
 };
 
+const addMonths = (date: Date, months: number) => {
+  const result = new Date(date);
+  const day = result.getDate();
+  result.setDate(1);
+  result.setMonth(result.getMonth() + months);
+  const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, lastDay));
+  return result;
+};
+
+/**
+ * Calendar-accurate difference between two dates (real month and year lengths,
+ * leap years included), in either direction.
+ */
+const getCalendarDifference = (a: Date, b: Date): TimeLeft => {
+  const [start, end] = a <= b ? [a, b] : [b, a];
+
+  let totalMonths =
+    (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  if (addMonths(start, totalMonths) > end) totalMonths -= 1;
+
+  const anchor = addMonths(start, totalMonths);
+  let remaining = Math.floor((end.getTime() - anchor.getTime()) / 1000);
+
+  const days = Math.floor(remaining / 86400);
+  remaining -= days * 86400;
+  const hours = Math.floor(remaining / 3600);
+  remaining -= hours * 3600;
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining - minutes * 60;
+
+  return {
+    years: Math.floor(totalMonths / 12),
+    months: totalMonths % 12,
+    days,
+    hours,
+    minutes,
+    seconds,
+  };
+};
+
 /**
  * Visual counter component that tracks time elapsed (or remaining) for a special date.
  * Displays years, months, days, hours, minutes, and seconds in a stylized grid.
  */
 export default function SpecialDateCounter({ date, title }: SpecialDateCounterProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
+  const [isFuture, setIsFuture] = useState(false);
 
   useEffect(() => {
     if (!date) return;
@@ -35,28 +77,9 @@ export default function SpecialDateCounter({ date, title }: SpecialDateCounterPr
     if (!targetDate) return;
 
     const calculateTimeLeft = () => {
-      const difference = +new Date() - +targetDate;
-
-      let diff = Math.abs(difference);
-
-      const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365));
-      diff -= years * (1000 * 60 * 60 * 24 * 365);
-
-      const months = Math.floor(diff / (1000 * 60 * 60 * 24 * 30));
-      diff -= months * (1000 * 60 * 60 * 24 * 30);
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      diff -= days * (1000 * 60 * 60 * 24);
-
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      diff -= hours * (1000 * 60 * 60);
-
-      const minutes = Math.floor(diff / (1000 * 60));
-      diff -= minutes * (1000 * 60);
-
-      const seconds = Math.floor(diff / 1000);
-
-      setTimeLeft({ years, months, days, hours, minutes, seconds });
+      const now = new Date();
+      setIsFuture(targetDate.getTime() > now.getTime());
+      setTimeLeft(getCalendarDifference(targetDate, now));
     };
 
     calculateTimeLeft();
@@ -95,11 +118,15 @@ export default function SpecialDateCounter({ date, title }: SpecialDateCounterPr
       <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-rose-400">
-            Tempo juntos
+            {isFuture ? "Contagem regressiva" : "Tempo juntos"}
           </span>
-          <h3 className="mt-1 text-2xl font-semibold text-stone-950 md:text-3xl">{title}</h3>
+          <h3 className="mt-1 text-2xl font-semibold text-brand-ink md:text-3xl">{title}</h3>
         </div>
-        {dateLabel && <span className="text-sm font-medium text-stone-500">Desde {dateLabel}</span>}
+        {dateLabel && (
+          <span className="text-sm font-medium text-stone-500">
+            {isFuture ? "Até" : "Desde"} {dateLabel}
+          </span>
+        )}
       </div>
 
       <motion.div

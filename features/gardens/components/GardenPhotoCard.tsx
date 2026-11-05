@@ -78,8 +78,9 @@ export default function GardenPhotoCard({
               onDelete(photo);
             }}
             disabled={deletingId === photo.id}
-            className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-red-500 opacity-0 shadow-md backdrop-blur transition-all duration-300 hover:bg-red-50 focus:opacity-100 group-hover:opacity-100"
+            className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-red-500 shadow-md backdrop-blur transition-all duration-300 hover:bg-red-50 focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
             title="Excluir foto"
+            aria-label="Excluir foto"
           >
             {deletingId === photo.id ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-200 border-t-red-500"></span>
@@ -92,7 +93,7 @@ export default function GardenPhotoCard({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent p-4 pt-14 opacity-100 transition duration-300 sm:translate-y-2 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
           {phrase && (
             <p className="mb-1 line-clamp-2 text-[11px] font-medium italic text-rose-100 md:text-xs">
-              &quot;{phrase}&quot;
+              &ldquo;{phrase}&rdquo;
             </p>
           )}
           <p className="text-sm font-semibold text-white drop-shadow-md">{photo.caption}</p>

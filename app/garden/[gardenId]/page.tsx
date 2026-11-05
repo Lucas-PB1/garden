@@ -1,5 +1,6 @@
 "use client";
 
+import LoadingScreen from "@/components/brand/LoadingScreen";
 import GardenLayout from "@/features/gardens/components/GardenLayout";
 import GardenPhotoCard from "@/features/gardens/components/GardenPhotoCard";
 import PhrasesManagerModal from "@/features/gardens/components/PhrasesManagerModal";
@@ -103,8 +104,6 @@ export default function GardenPage() {
     setShowDateModal,
     handleSaveSpecialDate,
     lovePhrases,
-    phrasesInputRef,
-    handlePhrasesUpload,
     showPhrasesModal,
     setShowPhrasesModal,
     handleSavePhrases,
@@ -119,11 +118,7 @@ export default function GardenPage() {
   const [showThemeModal, setShowThemeModal] = useState(false);
 
   if (loading || loadingGarden || loadingPhotos) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-rose-50">
-        <div className="h-12 w-12 animate-spin rounded-full border-2 border-rose-200 border-t-rose-700" />
-      </div>
-    );
+    return <LoadingScreen label="Abrindo a coleção..." />;
   }
 
   if (!user || !garden || !isCollaborator) return null;
@@ -169,7 +164,7 @@ export default function GardenPage() {
                     className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-600 transition hover:border-rose-200 hover:text-rose-700"
                   >
                     <FaArrowLeft className="text-xs" />
-                    Dashboard
+                    Minhas coleções
                   </Link>
                   <span className="rounded-full border border-rose-100 bg-rose-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-rose-500">
                     {isOwner ? "Sua coleção" : "Compartilhada"}
@@ -203,7 +198,7 @@ export default function GardenPage() {
                     onClick={isOwner ? startEditing : undefined}
                   >
                     <span className="flex min-w-0 items-start gap-3">
-                      <h1 className="break-words text-4xl font-semibold leading-[0.95] tracking-tight text-stone-950 [overflow-wrap:anywhere] md:text-6xl">
+                      <h1 className="break-words text-4xl font-semibold leading-[0.95] tracking-tight text-brand-ink [overflow-wrap:anywhere] md:text-6xl">
                         {gardenName}
                       </h1>
                       {isOwner && (
@@ -439,13 +434,6 @@ export default function GardenPage() {
             accept="image/*"
             className="hidden"
           />
-          <input
-            type="file"
-            ref={phrasesInputRef}
-            onChange={handlePhrasesUpload}
-            accept="application/json"
-            className="hidden"
-          />
 
           <motion.section className="mt-8" variants={sectionVariants}>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -453,7 +441,7 @@ export default function GardenPage() {
                 <span className="text-xs font-bold uppercase tracking-[0.2em] text-rose-500">
                   Memórias
                 </span>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-stone-950">
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-brand-ink">
                   Álbum de vocês
                 </h2>
               </div>
@@ -483,6 +471,7 @@ export default function GardenPage() {
                 <motion.button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
                   className="col-span-full flex min-h-[280px] flex-col items-center justify-center rounded-lg border border-dashed border-rose-200 bg-white/70 p-8 text-center transition hover:border-rose-300 hover:bg-white md:col-span-2 lg:col-span-2"
                   variants={sectionVariants}
                   whileHover={{ y: -3 }}
@@ -505,11 +494,16 @@ export default function GardenPage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
                 style={uploadButtonStyle}
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-md text-sm font-bold text-white"
+                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-md text-sm font-bold text-white disabled:opacity-70"
               >
-                <FaUpload />
-                Memória
+                {uploading ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  <FaUpload />
+                )}
+                {uploading ? "Enviando..." : "Memória"}
               </button>
               {photos.length > 0 && (
                 <button
@@ -527,6 +521,7 @@ export default function GardenPage() {
             {showShareModal && isOwner && (
               <ShareModal
                 gardenId={gardenId}
+                ownerId={garden.ownerId}
                 onClose={() => setShowShareModal(false)}
                 collaborators={garden.collaboratorIds || []}
                 onInvite={inviteCollaborator}
@@ -550,7 +545,6 @@ export default function GardenPage() {
             {showSlideshow && (
               <SlideshowModal
                 photos={photos}
-                lovePhrases={lovePhrases}
                 theme={garden.theme}
                 onClose={() => setShowSlideshow(false)}
                 startIndex={slideshowStartIndex}
@@ -564,7 +558,6 @@ export default function GardenPage() {
                 phrases={lovePhrases}
                 onSave={handleSavePhrases}
                 onClose={() => setShowPhrasesModal(false)}
-                fileInputRef={phrasesInputRef}
               />
             )}
           </AnimatePresence>

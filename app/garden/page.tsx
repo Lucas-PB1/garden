@@ -1,5 +1,6 @@
 "use client";
 
+import LoadingScreen from "@/components/brand/LoadingScreen";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -22,9 +23,5 @@ export default function GardenPage() {
     }
   }, [user, loading, router]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-pink-50">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-400"></div>
-    </div>
-  );
+  return <LoadingScreen />;
 }

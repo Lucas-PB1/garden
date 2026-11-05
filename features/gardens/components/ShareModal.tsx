@@ -1,10 +1,12 @@
+import { copyToClipboard } from "@/lib/ui/clipboard";
+import Swal, { dangerCustomClass } from "@/lib/ui/swal";
 import { motion } from "motion/react";
 import React from "react";
 import { FaCopy, FaPlus, FaTimes, FaTrash } from "react-icons/fa";
-import Swal from "sweetalert2";
 
 interface ShareModalProps {
   gardenId: string;
+  ownerId: string;
   onClose: () => void;
   collaborators: string[];
   onInvite: (uid: string) => Promise<void>;
@@ -17,6 +19,7 @@ interface ShareModalProps {
  */
 export default function ShareModal({
   gardenId,
+  ownerId,
   onClose,
   collaborators,
   onInvite,
@@ -24,20 +27,53 @@ export default function ShareModal({
 }: ShareModalProps) {
   const [inviteId, setInviteId] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [removingId, setRemovingId] = React.useState<string | null>(null);
 
   const copyGardenLink = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/garden/${gardenId}`);
+    const copied = await copyToClipboard(`${window.location.origin}/garden/${gardenId}`);
     Swal.fire({
       toast: true,
       position: "top-end",
-      icon: "success",
-      title: "Link copiado",
+      icon: copied ? "success" : "error",
+      title: copied ? "Link copiado" : "Não foi possível copiar o link",
       showConfirmButton: false,
-      timer: 1500,
+      timer: 1800,
     });
   };
 
+  const handleRemove = async (uid: string) => {
+    const result = await Swal.fire({
+      title: "Remover colaborador?",
+      text: "Essa pessoa perde o acesso à coleção. As fotos enviadas por ela continuam aqui.",
+      icon: "warning",
+      showCancelButton: true,
+      customClass: dangerCustomClass,
+      confirmButtonText: "Remover",
+      cancelButtonText: "Cancelar",
+    });
+    if (!result.isConfirmed) return;
+
+    setRemovingId(uid);
+    try {
+      await onRemove(uid);
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Erro", "Não foi possível remover o colaborador.", "error");
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
   const handleInvite = async () => {
+    const id = inviteId.trim();
+    if (id === ownerId) {
+      Swal.fire("Esse é você", "O dono já tem acesso à coleção.", "info");
+      return;
+    }
+    if (collaborators.includes(id)) {
+      Swal.fire("Já adicionado", "Essa pessoa já colabora nesta coleção.", "info");
+      return;
+    }
     if (inviteId.trim()) {
       setLoading(true);
       try {
@@ -76,8 +112,11 @@ export default function ShareModal({
         >
           <FaTimes />
         </button>
-        <h3 className="mb-1 text-2xl font-semibold text-stone-950">Colaboradores</h3>
-        <p className="mb-6 text-sm text-stone-500">Convide pessoas para esta coleção.</p>
+        <h3 className="mb-1 text-2xl font-semibold text-brand-ink">Colaboradores</h3>
+        <p className="mb-6 text-sm text-stone-500">
+          Peça para a pessoa copiar o ID dela no painel e cole aqui. O link só abre para quem foi
+          convidado.
+        </p>
 
         <div className="mb-8 space-y-4">
           <button
@@ -93,6 +132,7 @@ export default function ShareModal({
             <input
               value={inviteId}
               onChange={(e) => setInviteId(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleInvite()}
               placeholder="Digite o ID do usuário..."
               className="min-w-0 flex-grow rounded-lg border border-stone-200 p-3 transition focus:outline-none focus:ring-2 focus:ring-rose-200"
             />
@@ -125,9 +165,11 @@ export default function ShareModal({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onRemove(uid)}
-                  className="rounded-md p-2 text-red-300 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                  onClick={() => handleRemove(uid)}
+                  disabled={removingId === uid}
+                  className="rounded-md p-2 text-red-300 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
                   title="Remover"
+                  aria-label="Remover colaborador"
                 >
                   <FaTrash />
                 </button>

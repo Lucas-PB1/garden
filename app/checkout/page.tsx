@@ -1,6 +1,9 @@
 "use client";
 
+import BrandLogo from "@/components/brand/BrandLogo";
+import LoadingScreen from "@/components/brand/LoadingScreen";
 import { useAuth } from "@/context/AuthContext";
+import { useEntitlement } from "@/features/commerce/hooks/useEntitlement";
 import { createCheckout, fetchCommerceConfig } from "@/features/commerce/services/checkoutService";
 import type { PublicCommerceConfig } from "@/features/commerce/types";
 import { formatCurrencyFromCents } from "@/features/commerce/utils/formatCurrency";
@@ -14,13 +17,16 @@ export default function CheckoutPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [config, setConfig] = useState<PublicCommerceConfig | null>(null);
-  const [buyerName, setBuyerName] = useState("");
+  // null means "not edited yet": the field shows the account name as a prefilled value.
+  const [buyerNameInput, setBuyerName] = useState<string | null>(null);
   const [partnerName, setPartnerName] = useState("");
   const [dedication, setDedication] = useState("");
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const { hasAccess, loading: entitlementLoading } = useEntitlement(user?.uid);
   const suggestedBuyerName = user?.displayName || user?.email?.split("@")[0] || "";
+  const buyerName = buyerNameInput ?? suggestedBuyerName;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -57,7 +63,7 @@ export default function CheckoutPage() {
 
     try {
       const checkout = await createCheckout(user, {
-        buyerName: buyerName || suggestedBuyerName,
+        buyerName: buyerName.trim() || suggestedBuyerName,
         partnerName,
         dedication,
       });
@@ -73,34 +79,33 @@ export default function CheckoutPage() {
     }
   };
 
-  if (authLoading || !user || loadingConfig) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-rose-50">
-        <div className="h-12 w-12 animate-spin rounded-full border-2 border-rose-200 border-t-rose-700" />
-      </div>
-    );
+  if (authLoading || !user || loadingConfig || entitlementLoading) {
+    return <LoadingScreen label="Preparando o checkout..." />;
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#fff8f5] text-stone-950">
+    <div className="relative min-h-screen overflow-hidden bg-cream text-stone-950">
       <Image src="/bg/floral-bg-v2.png" alt="" fill priority className="object-cover opacity-80" />
       <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.96)_0%,rgba(255,247,237,0.88)_52%,rgba(236,253,245,0.70)_100%)]" />
 
       <main className="relative z-10 mx-auto grid min-h-screen max-w-6xl gap-8 px-5 py-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:px-10">
         <section>
-          <Link
-            href="/"
-            className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-stone-500 transition hover:text-rose-800"
-          >
-            <FaArrowLeft className="text-xs" />
-            Voltar
-          </Link>
+          <div className="mb-10 flex items-center justify-between gap-4">
+            <BrandLogo />
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm font-bold text-stone-500 transition hover:text-rose-800"
+            >
+              <FaArrowLeft className="text-xs" />
+              Voltar
+            </Link>
+          </div>
 
-          <span className="mb-4 inline-flex rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
+          <span className="mb-4 inline-flex rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-leaf">
             Compra única
           </span>
-          <h1 className="max-w-xl text-4xl font-semibold tracking-tight text-rose-950 md:text-6xl">
-            Seu Love Garden pronto para o Dia dos Namorados.
+          <h1 className="max-w-xl text-4xl font-semibold leading-[1.05] tracking-tight text-brand-ink md:text-6xl">
+            Seu Love Garden pronto para <span className="italic text-rose-700">florescer</span>.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-stone-600">
             O pagamento é processado pelo Mercado Pago. O acesso só é liberado depois da confirmação
@@ -126,7 +131,7 @@ export default function CheckoutPage() {
         <section className="rounded-lg border border-white/80 bg-white/92 p-5 shadow-[0_24px_90px_rgba(127,29,29,0.12)] backdrop-blur md:p-7">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-stone-950">Finalizar</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-brand-ink">Finalizar</h2>
               <p className="mt-1 text-sm text-stone-500">{user.email}</p>
             </div>
             <div className="rounded-lg bg-rose-50 p-3 text-rose-800">
@@ -140,7 +145,17 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {!config?.active ? (
+          {hasAccess ? (
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+              <p className="font-semibold">Sua conta já tem acesso ao Love Garden.</p>
+              <Link
+                href="/dashboard"
+                className="mt-3 inline-flex items-center gap-2 font-bold text-emerald-900 underline-offset-4 hover:underline"
+              >
+                Ir para o painel
+              </Link>
+            </div>
+          ) : !config?.active ? (
             <div className="rounded-lg border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
               As vendas estão pausadas no momento.
             </div>
@@ -154,7 +169,7 @@ export default function CheckoutPage() {
                   onChange={(event) => setBuyerName(event.target.value)}
                   maxLength={80}
                   className="w-full rounded-lg border border-stone-200 bg-white px-4 py-3 text-stone-800 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-rose-200"
-                  placeholder={suggestedBuyerName}
+                  placeholder="Como devemos te chamar?"
                   required
                 />
               </div>
@@ -175,7 +190,7 @@ export default function CheckoutPage() {
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-stone-700">
-                  Dedicação inicial
+                  Dedicatória
                 </label>
                 <textarea
                   value={dedication}

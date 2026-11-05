@@ -1,5 +1,6 @@
 "use client";
 
+import LoadingScreen from "@/components/brand/LoadingScreen";
 import { useAuth } from "@/context/AuthContext";
 import UserAccountSection from "@/features/auth/components/UserAccountSection";
 import { useGoogleAccountLink } from "@/features/auth/hooks/useGoogleAccountLink";
@@ -8,11 +9,12 @@ import { useEntitlement } from "@/features/commerce/hooks/useEntitlement";
 import GardenLayout from "@/features/gardens/components/GardenLayout";
 import { useGardenDashboard } from "@/features/gardens/hooks/useGardenDashboard";
 import { createGarden, deleteGarden } from "@/features/gardens/services/gardenService";
+import { copyToClipboard } from "@/lib/ui/clipboard";
+import Swal, { dangerCustomClass } from "@/lib/ui/swal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { FaArrowRight, FaCreditCard, FaLock, FaPlus, FaTrash } from "react-icons/fa";
-import Swal from "sweetalert2";
 
 const filterOptions = [
   { id: "all", label: "Todos" },
@@ -31,6 +33,7 @@ export default function DashboardPage() {
   const { user, loading: authLoading, logout } = useAuth();
   const {
     gardens,
+    allGardens,
     loading: gardensLoading,
     filter,
     setFilter,
@@ -44,10 +47,10 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const ownedCount = useMemo(
-    () => gardens.filter((garden) => garden.ownerId === user?.uid).length,
-    [gardens, user?.uid],
+    () => allGardens.filter((garden) => garden.ownerId === user?.uid).length,
+    [allGardens, user?.uid],
   );
-  const sharedCount = gardens.length - ownedCount;
+  const sharedCount = allGardens.length - ownedCount;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -69,8 +72,6 @@ export default function DashboardPage() {
         text: "Para criar uma coleção própria, finalize a compra única do Love Garden.",
         icon: "info",
         showCancelButton: true,
-        confirmButtonColor: "#be123c",
-        cancelButtonColor: "#cbd5e1",
         confirmButtonText: "Comprar acesso",
         cancelButtonText: "Agora não",
       });
@@ -87,7 +88,6 @@ export default function DashboardPage() {
       input: "text",
       inputPlaceholder: "Ex: Dia dos Namorados 2026",
       showCancelButton: true,
-      confirmButtonColor: "#be123c",
       confirmButtonText: "Criar coleção",
       cancelButtonText: "Cancelar",
       inputValidator: (value) => {
@@ -114,19 +114,25 @@ export default function DashboardPage() {
 
   const handleDeleteGarden = async (gardenId: string, gardenName: string) => {
     const result = await Swal.fire({
-      title: `Excluir "${gardenName}"?`,
+      // titleText renders as plain text, so a garden name can never inject HTML.
+      titleText: `Excluir "${gardenName}"?`,
       text: "As fotos dessa coleção serão apagadas. Essa ação não pode ser desfeita.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#cbd5e1",
+      customClass: dangerCustomClass,
       confirmButtonText: "Excluir",
       cancelButtonText: "Cancelar",
     });
 
     if (result.isConfirmed) {
       try {
-        Swal.showLoading();
+        Swal.fire({
+          title: "Excluindo coleção...",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => Swal.showLoading(),
+        });
         await deleteGarden(gardenId);
         await refreshDashboard();
         Swal.fire("Excluída", "A coleção foi removida.", "success");
@@ -137,18 +143,18 @@ export default function DashboardPage() {
     }
   };
 
-  const copyUserId = () => {
-    if (user?.uid) {
-      navigator.clipboard.writeText(user.uid);
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "ID copiado",
-        showConfirmButton: false,
-        timer: 1500,
-      });
-    }
+  const copyUserId = async () => {
+    if (!user?.uid) return;
+
+    const copied = await copyToClipboard(user.uid);
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: copied ? "success" : "error",
+      title: copied ? "ID copiado" : "Não foi possível copiar o ID",
+      showConfirmButton: false,
+      timer: 1800,
+    });
   };
 
   const handleEditDisplayName = async () => {
@@ -160,7 +166,6 @@ export default function DashboardPage() {
       inputValue: displayName,
       inputPlaceholder: "Nome exibido",
       showCancelButton: true,
-      confirmButtonColor: "#be123c",
       confirmButtonText: "Salvar",
       cancelButtonText: "Cancelar",
       inputValidator: (name) => {
@@ -195,7 +200,6 @@ export default function DashboardPage() {
         text: result.alreadyLinked
           ? "Sua conta já podia entrar com Google."
           : "Agora você também pode entrar usando sua conta Google.",
-        confirmButtonColor: "#16a34a",
       });
       return;
     }
@@ -204,7 +208,6 @@ export default function DashboardPage() {
       icon: "error",
       title: "Não foi possível vincular",
       text: result.message,
-      confirmButtonColor: "#be123c",
     });
   };
 
@@ -213,8 +216,6 @@ export default function DashboardPage() {
       title: "Sair da conta?",
       icon: "question",
       showCancelButton: true,
-      confirmButtonColor: "#be123c",
-      cancelButtonColor: "#cbd5e1",
       confirmButtonText: "Sair",
       cancelButtonText: "Cancelar",
     });
@@ -224,12 +225,8 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || !user || entitlementLoading || (gardensLoading && gardens.length === 0)) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-rose-50">
-        <div className="h-12 w-12 animate-spin rounded-full border-2 border-rose-200 border-t-rose-700" />
-      </div>
-    );
+  if (authLoading || !user || entitlementLoading || (gardensLoading && allGardens.length === 0)) {
+    return <LoadingScreen label="Carregando suas coleções..." />;
   }
 
   return (
@@ -240,7 +237,7 @@ export default function DashboardPage() {
             <span className="mb-3 inline-flex rounded-full border border-rose-100 bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-rose-500">
               Dia dos Namorados
             </span>
-            <h1 className="text-4xl font-semibold tracking-tight text-stone-950 md:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-brand-ink md:text-5xl">
               Coleções para guardar o que fica
             </h1>
             <p className="mt-3 text-base leading-7 text-stone-600">
@@ -285,7 +282,7 @@ export default function DashboardPage() {
                   <FaLock />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-stone-950">
+                  <h2 className="text-lg font-semibold text-brand-ink">
                     Compra única para criar seu Love Garden
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-stone-600">
@@ -308,7 +305,7 @@ export default function DashboardPage() {
         <UserAccountSection
           user={user}
           displayName={displayName}
-          gardensCount={gardens.length}
+          gardensCount={allGardens.length}
           ownedCount={ownedCount}
           sharedCount={sharedCount}
           isGoogleLinked={isGoogleLinked}
@@ -322,7 +319,7 @@ export default function DashboardPage() {
 
         <section>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-stone-950">Suas coleções</h2>
+            <h2 className="text-lg font-semibold text-brand-ink">Suas coleções</h2>
             <span className="text-sm font-medium text-stone-500">
               {gardens.length} {gardens.length === 1 ? "coleção" : "coleções"}
             </span>
@@ -362,7 +359,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
 
-                  <h3 className="text-2xl font-semibold leading-tight text-stone-950">
+                  <h3 className="text-2xl font-semibold leading-tight text-brand-ink">
                     {garden.name}
                   </h3>
                   <p className="mt-3 text-sm leading-6 text-stone-500">
@@ -377,7 +374,24 @@ export default function DashboardPage() {
               </Link>
             ))}
 
-            {gardens.length === 0 && !gardensLoading && (
+            {gardens.length === 0 && allGardens.length > 0 && (
+              <div className="col-span-full rounded-lg border border-dashed border-rose-200 bg-white/70 px-6 py-14 text-center">
+                <p className="text-xl font-semibold text-stone-950">
+                  {filter === "mine"
+                    ? "Você ainda não criou uma coleção"
+                    : "Nenhuma coleção compartilhada com você"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setFilter("all")}
+                  className="mt-6 inline-flex items-center gap-2 rounded-lg border border-rose-100 bg-white px-5 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-50"
+                >
+                  Ver todas
+                </button>
+              </div>
+            )}
+
+            {allGardens.length === 0 && !gardensLoading && (
               <div className="col-span-full rounded-lg border border-dashed border-rose-200 bg-white/70 px-6 py-14 text-center">
                 <p className="text-xl font-semibold text-stone-950">
                   {hasAccess ? "Nenhuma coleção ainda" : "Seu acesso ainda não foi liberado"}

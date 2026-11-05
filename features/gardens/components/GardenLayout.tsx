@@ -1,3 +1,4 @@
+import BrandLogo from "@/components/brand/BrandLogo";
 import type { GardenTheme } from "@/features/gardens/types";
 import Image from "next/image";
 import React from "react";
@@ -5,6 +6,8 @@ import React from "react";
 interface GardenLayoutProps {
   children: React.ReactNode;
   theme?: GardenTheme;
+  /** Optional content shown at the right of the brand bar (e.g. account actions). */
+  headerAction?: React.ReactNode;
 }
 
 const getSafeCustomBackgroundUrl = (url?: string) => {
@@ -22,12 +25,12 @@ const getSafeCustomBackgroundUrl = (url?: string) => {
  * Shared container layout providing the visual foundation for the garden application.
  * Includes a subtle floral background, gradient overlays, and a responsive content wrapper.
  */
-export default function GardenLayout({ children, theme }: GardenLayoutProps) {
+export default function GardenLayout({ children, theme, headerAction }: GardenLayoutProps) {
   const customBackgroundUrl = getSafeCustomBackgroundUrl(theme?.customBgUrl);
 
   return (
     <div
-      className="relative min-h-screen bg-rose-50 p-4 transition-colors duration-1000 md:p-8"
+      className="relative min-h-screen bg-cream p-4 transition-colors duration-1000 md:p-8"
       style={{ backgroundColor: theme?.bgType === "minimalist" ? "white" : undefined }}
     >
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
@@ -64,7 +67,13 @@ export default function GardenLayout({ children, theme }: GardenLayoutProps) {
           }}
         ></div>
       </div>
-      <div className="relative z-10 transition-all duration-500">{children}</div>
+      <div className="relative z-10 transition-all duration-500">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-2 md:px-0">
+          <BrandLogo href="/dashboard" size="sm" />
+          {headerAction}
+        </div>
+        {children}
+      </div>
     </div>
   );
 }

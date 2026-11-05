@@ -1,5 +1,7 @@
 "use client";
 
+import BrandLogo from "@/components/brand/BrandLogo";
+import LoadingScreen from "@/components/brand/LoadingScreen";
 import { useAuth } from "@/context/AuthContext";
 import {
   fetchAdminCommerce,
@@ -82,21 +84,18 @@ export default function AdminPage() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-50">
-        <div className="h-12 w-12 animate-spin rounded-full border-2 border-stone-200 border-t-rose-700" />
-      </div>
-    );
+    return <LoadingScreen label="Abrindo admin..." />;
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#fff7f7_0%,#ffffff_42%,#ecfeff_100%)] px-5 py-8 text-stone-950 md:px-10">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#fffaf6_0%,#ffffff_42%,#ecfdf5_100%)] px-5 py-8 text-stone-950 md:px-10">
       <main className="mx-auto max-w-6xl">
         <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
+            <BrandLogo href="/dashboard" size="sm" className="mb-6" />
             <Link
               href="/dashboard"
-              className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-stone-500 transition hover:text-rose-800"
+              className="mb-5 flex w-fit items-center gap-2 text-sm font-bold text-stone-500 transition hover:text-rose-800"
             >
               <FaArrowLeft className="text-xs" />
               Voltar ao painel
@@ -106,7 +105,7 @@ export default function AdminPage() {
                 <FaShieldAlt />
               </div>
               <div>
-                <h1 className="text-4xl font-semibold tracking-tight">Admin</h1>
+                <h1 className="text-4xl font-semibold tracking-tight text-brand-ink">Admin</h1>
                 <p className="mt-1 text-sm text-stone-500">Configuração comercial e pedidos.</p>
               </div>
             </div>

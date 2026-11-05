@@ -1,4 +1,5 @@
 import type { GardenTheme } from "@/features/gardens/types";
+import Swal from "@/lib/ui/swal";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { FaTimes } from "react-icons/fa";
@@ -19,7 +20,7 @@ const THEME_OPTIONS: Array<{
     id: "floral",
     label: "Floral",
     description: "Claro e romântico",
-    colors: { primaryColor: "#ec4899", secondaryColor: "#fbcfe8" },
+    colors: { primaryColor: "#be123c", secondaryColor: "#fda4af" },
   },
   {
     id: "stars",
@@ -36,6 +37,14 @@ const THEME_OPTIONS: Array<{
   { id: "custom", label: "Customizado", description: "Sua imagem" },
 ];
 
+const isHttpsUrl = (value: string) => {
+  try {
+    return new URL(value.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Modal for customizing the garden's aesthetic appearance.
  */
@@ -43,11 +52,21 @@ export default function ThemeModal({ onClose, currentTheme, onSave }: ThemeModal
   const [theme, setTheme] = useState<GardenTheme>(currentTheme);
   const [saving, setSaving] = useState(false);
 
+  const customUrlError =
+    theme.bgType === "custom" && !isHttpsUrl(theme.customBgUrl || "")
+      ? "Informe um link de imagem que comece com https://"
+      : "";
+
   const handleSave = async () => {
+    if (customUrlError) return;
+
     setSaving(true);
     try {
-      await onSave(theme);
+      await onSave({ ...theme, customBgUrl: theme.customBgUrl?.trim() || undefined });
       onClose();
+    } catch (error) {
+      console.error("Failed to save theme", error);
+      Swal.fire("Erro", "Não foi possível salvar o tema.", "error");
     } finally {
       setSaving(false);
     }
@@ -76,7 +95,7 @@ export default function ThemeModal({ onClose, currentTheme, onSave }: ThemeModal
         >
           <FaTimes />
         </button>
-        <h3 className="mb-1 text-2xl font-semibold text-stone-950">Personalizar jardim</h3>
+        <h3 className="mb-1 text-2xl font-semibold text-brand-ink">Personalizar coleção</h3>
         <p className="mb-6 text-sm text-stone-500">Ajuste o clima visual desta coleção.</p>
 
         <div className="space-y-6">
@@ -118,6 +137,9 @@ export default function ThemeModal({ onClose, currentTheme, onSave }: ThemeModal
                 placeholder="https://exemplo.com/imagem.jpg"
                 className="w-full rounded-lg border border-stone-200 p-3 focus:outline-none focus:ring-2 focus:ring-rose-200"
               />
+              {customUrlError && (
+                <p className="mt-2 text-xs font-semibold text-rose-700">{customUrlError}</p>
+              )}
             </div>
           )}
 
@@ -155,10 +177,10 @@ export default function ThemeModal({ onClose, currentTheme, onSave }: ThemeModal
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || Boolean(customUrlError)}
             className="w-full rounded-lg bg-rose-900 py-3.5 font-bold text-white shadow-lg shadow-rose-950/10 transition hover:bg-rose-800 disabled:opacity-50"
           >
-            {saving ? "Salvando..." : "Salvar Estilo"}
+            {saving ? "Salvando..." : "Salvar estilo"}
           </button>
         </div>
       </motion.div>

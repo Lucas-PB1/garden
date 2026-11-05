@@ -3,23 +3,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signInWithGoogle, upsertUserProfile } from "../services/authService";
-
-const getSafeCallbackUrl = () => {
-  const params = new URLSearchParams(window.location.search);
-  const callbackUrl = params.get("callbackUrl");
-
-  if (!callbackUrl || !callbackUrl.startsWith("/") || callbackUrl.startsWith("//")) {
-    return "/dashboard";
-  }
-
-  try {
-    const url = new URL(callbackUrl, window.location.origin);
-    if (url.origin !== window.location.origin) return "/dashboard";
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return "/dashboard";
-  }
-};
+import { getAuthErrorMessage, getSafeCallbackUrl, isPopupDismissed } from "../utils/authUtils";
 
 /**
  * Hook for managing the registration form state and new user creation.
@@ -48,15 +32,15 @@ export function useRegister() {
     setIsSubmitting(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
 
       await updateProfile(userCredential.user, { displayName });
       await upsertUserProfile(userCredential.user, { displayName });
 
       router.push(getSafeCallbackUrl());
     } catch (err) {
-      const firebaseError = err as { message?: string };
-      setError(firebaseError.message || "Falha ao registrar. Tente novamente.");
+      console.error(err);
+      setError(getAuthErrorMessage(err, "Falha ao registrar. Tente novamente."));
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +54,8 @@ export function useRegister() {
       await signInWithGoogle();
       router.push(getSafeCallbackUrl());
     } catch (err) {
-      setError("Não foi possível continuar com Google. Tente novamente.");
+      if (isPopupDismissed(err)) return;
+      setError(getAuthErrorMessage(err, "Não foi possível continuar com Google. Tente novamente."));
       console.error(err);
     } finally {
       setIsGoogleSubmitting(false);

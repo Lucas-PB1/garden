@@ -3,23 +3,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signInWithGoogle } from "../services/authService";
-
-const getSafeCallbackUrl = () => {
-  const params = new URLSearchParams(window.location.search);
-  const callbackUrl = params.get("callbackUrl");
-
-  if (!callbackUrl || !callbackUrl.startsWith("/") || callbackUrl.startsWith("//")) {
-    return "/dashboard";
-  }
-
-  try {
-    const url = new URL(callbackUrl, window.location.origin);
-    if (url.origin !== window.location.origin) return "/dashboard";
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return "/dashboard";
-  }
-};
+import { getAuthErrorMessage, getSafeCallbackUrl, isPopupDismissed } from "../utils/authUtils";
 
 /**
  * Hook for managing the login form state and authentication flow.
@@ -40,10 +24,10 @@ export function useLogin() {
     setIsSubmitting(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       router.push(getSafeCallbackUrl());
     } catch (err) {
-      setError("Falha ao entrar. Verifique suas credenciais.");
+      setError(getAuthErrorMessage(err, "Falha ao entrar. Verifique suas credenciais."));
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -58,7 +42,8 @@ export function useLogin() {
       await signInWithGoogle();
       router.push(getSafeCallbackUrl());
     } catch (err) {
-      setError("Não foi possível entrar com Google. Tente novamente.");
+      if (isPopupDismissed(err)) return;
+      setError(getAuthErrorMessage(err, "Não foi possível entrar com Google. Tente novamente."));
       console.error(err);
     } finally {
       setIsGoogleSubmitting(false);

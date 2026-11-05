@@ -46,7 +46,7 @@ export default function UserAccountSection({
     <section className="mb-10 rounded-lg border border-rose-100 bg-white/88 p-5 shadow-[0_18px_60px_rgba(127,29,29,0.08)] backdrop-blur">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-rose-950 text-2xl font-semibold text-white shadow-lg shadow-rose-950/10">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-ink font-display text-2xl font-semibold text-white shadow-lg shadow-rose-950/10">
             {user.photoURL ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={user.photoURL} alt="" className="h-full w-full object-cover" />
@@ -68,7 +68,7 @@ export default function UserAccountSection({
               )}
             </div>
 
-            <h2 className="truncate text-2xl font-semibold text-stone-950">{displayName}</h2>
+            <h2 className="truncate text-2xl font-semibold text-brand-ink">{displayName}</h2>
 
             <div className="mt-2 flex flex-col gap-1 text-sm text-stone-500">
               <span className="inline-flex min-w-0 items-center gap-2">
@@ -96,7 +96,7 @@ export default function UserAccountSection({
 
         <div className="grid grid-cols-3 divide-x divide-rose-100 sm:min-w-[300px]">
           {[
-            { label: "Jardins", value: gardensCount },
+            { label: "Coleções", value: gardensCount },
             { label: "Seus", value: ownedCount },
             { label: "Compart.", value: sharedCount },
           ].map((item) => (

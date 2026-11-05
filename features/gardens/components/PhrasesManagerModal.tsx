@@ -1,12 +1,14 @@
+import Swal from "@/lib/ui/swal";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FaDownload, FaPen, FaPlus, FaTimes, FaTrash, FaUpload } from "react-icons/fa";
+import { MAX_LOVE_PHRASE_LENGTH, MAX_LOVE_PHRASES, MAX_PHRASES_IMPORT_BYTES } from "../constants";
+import { sanitizeLovePhrases } from "../utils/gardenValidation";
 
 interface PhrasesManagerModalProps {
   phrases: string[];
   onSave: (newPhrases: string[]) => Promise<void>;
   onClose: () => void;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 /**
@@ -17,8 +19,8 @@ export default function PhrasesManagerModal({
   phrases,
   onSave,
   onClose,
-  fileInputRef,
 }: PhrasesManagerModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [localPhrases, setLocalPhrases] = useState<string[]>([...phrases]);
   const [newPhrase, setNewPhrase] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -27,11 +29,57 @@ export default function PhrasesManagerModal({
   /**
    * Adds a new phrase to the local collection.
    */
+  const isFull = localPhrases.length >= MAX_LOVE_PHRASES;
+
   const handleAdd = () => {
-    if (newPhrase.trim()) {
-      setLocalPhrases([...localPhrases, newPhrase.trim()]);
+    if (newPhrase.trim() && !isFull) {
+      setLocalPhrases([...localPhrases, newPhrase.trim().slice(0, MAX_LOVE_PHRASE_LENGTH)]);
       setNewPhrase("");
     }
+  };
+
+  /**
+   * Reads a JSON array of phrases into the local list. Nothing is persisted until "Salvar",
+   * so the imported list is never overwritten by stale local state.
+   */
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (file.size > MAX_PHRASES_IMPORT_BYTES) {
+      Swal.fire("Arquivo grande demais", "Envie um JSON de frases de até 256 KB.", "error");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed: unknown = JSON.parse(String(reader.result));
+        if (!Array.isArray(parsed)) throw new Error("Not an array");
+
+        const imported = sanitizeLovePhrases(parsed as string[]);
+        if (imported.length === 0) throw new Error("Empty list");
+
+        setLocalPhrases(imported);
+        setEditingIndex(null);
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: `${imported.length} frases importadas. Clique em Salvar para aplicar.`,
+          showConfirmButton: false,
+          timer: 2600,
+        });
+      } catch {
+        Swal.fire(
+          "JSON inválido",
+          'Use uma lista de textos, por exemplo: ["amo seu sorriso", "amo seu abraço"].',
+          "error",
+        );
+      }
+    };
+    reader.readAsText(file);
   };
 
   /**
@@ -59,10 +107,11 @@ export default function PhrasesManagerModal({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave(localPhrases);
+      await onSave(sanitizeLovePhrases(localPhrases));
       onClose();
     } catch (error) {
       console.error("Failed to save phrases", error);
+      Swal.fire("Erro", "Não foi possível salvar as frases.", "error");
     } finally {
       setSaving(false);
     }
@@ -99,8 +148,10 @@ export default function PhrasesManagerModal({
       >
         <div className="flex items-center justify-between border-b border-rose-100 p-6">
           <div>
-            <h3 className="text-2xl font-semibold text-stone-950">Frases</h3>
-            <p className="text-sm text-stone-500">Mensagens exibidas junto às memórias.</p>
+            <h3 className="text-2xl font-semibold text-brand-ink">Frases</h3>
+            <p className="text-sm text-stone-500">
+              Mensagens exibidas junto às memórias · {localPhrases.length}/{MAX_LOVE_PHRASES}
+            </p>
           </div>
           <button
             type="button"
@@ -120,6 +171,7 @@ export default function PhrasesManagerModal({
                   <input
                     autoFocus
                     value={phrase}
+                    maxLength={MAX_LOVE_PHRASE_LENGTH}
                     onChange={(e) => handleUpdate(index, e.target.value)}
                     onBlur={() => setEditingIndex(null)}
                     onKeyDown={(e) => e.key === "Enter" && setEditingIndex(null)}
@@ -131,7 +183,7 @@ export default function PhrasesManagerModal({
                     className="flex flex-grow cursor-pointer items-center justify-between rounded-lg border border-stone-200 bg-stone-50 p-3 transition hover:border-rose-100 hover:bg-rose-50"
                   >
                     <span className="text-sm italic text-stone-700">&quot;{phrase}&quot;</span>
-                    <span className="text-xs text-rose-300 opacity-0 transition group-hover:opacity-100">
+                    <span className="text-xs text-rose-300 transition sm:opacity-0 sm:group-hover:opacity-100">
                       <FaPen />
                     </span>
                   </div>
@@ -159,7 +211,9 @@ export default function PhrasesManagerModal({
         <div className="space-y-4 border-t border-rose-100 bg-stone-50/60 p-6">
           <div className="flex gap-2">
             <input
-              placeholder="Adicione uma nova frase..."
+              placeholder={isFull ? "Limite de frases atingido" : "Adicione uma nova frase..."}
+              maxLength={MAX_LOVE_PHRASE_LENGTH}
+              disabled={isFull}
               value={newPhrase}
               onChange={(e) => setNewPhrase(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
@@ -168,12 +222,21 @@ export default function PhrasesManagerModal({
             <button
               type="button"
               onClick={handleAdd}
-              className="inline-flex items-center gap-2 rounded-lg bg-rose-900 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-rose-800"
+              disabled={isFull || !newPhrase.trim()}
+              className="inline-flex items-center gap-2 rounded-lg bg-rose-900 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FaPlus />
               Adicionar
             </button>
           </div>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImport}
+            accept="application/json,.json"
+            className="hidden"
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <div className="flex gap-2">
