@@ -1,12 +1,11 @@
-import type { GardenPhoto, GardenTheme } from "@/features/gardens/types";
+import type { GardenPhotoWithPhrase, GardenTheme } from "@/features/gardens/types";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { FaChevronLeft, FaChevronRight, FaPause, FaPlay, FaTimes } from "react-icons/fa";
 
 interface SlideshowModalProps {
-  photos: GardenPhoto[];
-  lovePhrases: string[];
+  photos: GardenPhotoWithPhrase[];
   theme?: GardenTheme;
   onClose: () => void;
   startIndex?: number;
@@ -14,11 +13,11 @@ interface SlideshowModalProps {
 
 /**
  * Fullscreen slideshow modal for immersive viewing of garden photos.
- * Features automatic cycling, keyboard navigation, and deterministic love phrase selection.
+ * Features automatic cycling, keyboard navigation, and the same love phrase shown on each
+ * photo card in the gallery.
  */
 export default function SlideshowModal({
   photos,
-  lovePhrases,
   theme,
   onClose,
   startIndex = 0,
@@ -28,24 +27,6 @@ export default function SlideshowModal({
 
   const currentPhoto = photos[currentIndex];
 
-  /**
-   * Deterministically selects a love phrase based on the photo's unique identifier.
-   * Ensures the same phrase always accompanies the same photo.
-   * @param id - The unique ID of the photo.
-   * @returns An assigned love phrase string.
-   */
-  const getPhrase = (id: string) => {
-    if (!lovePhrases || lovePhrases.length === 0) return "";
-    const index =
-      Math.abs(
-        id.split("").reduce((a, b) => {
-          a = (a << 5) - a + b.charCodeAt(0);
-          return a & a;
-        }, 0),
-      ) % lovePhrases.length;
-    return lovePhrases[index];
-  };
-
   const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % photos.length);
   }, [photos.length]);
@@ -54,17 +35,32 @@ export default function SlideshowModal({
     setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
   }, [photos.length]);
 
+  // Restart the timer whenever the slide changes, so a manual skip still gets the full 5s.
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPlaying && photos.length > 1) {
-      interval = setInterval(nextSlide, 5000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, nextSlide, photos.length]);
+    if (!isPlaying || photos.length <= 1) return;
+    const timeout = setTimeout(nextSlide, 5000);
+    return () => clearTimeout(timeout);
+  }, [currentIndex, isPlaying, nextSlide, photos.length]);
 
   useEffect(() => {
     setCurrentIndex(startIndex);
   }, [startIndex]);
+
+  // Keep the index valid if photos are removed while the slideshow is open.
+  useEffect(() => {
+    if (photos.length > 0 && currentIndex >= photos.length) {
+      setCurrentIndex(photos.length - 1);
+    }
+  }, [currentIndex, photos.length]);
+
+  // Lock page scroll behind the fullscreen slideshow.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -174,9 +170,9 @@ export default function SlideshowModal({
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.22 }}
           >
-            {lovePhrases.length > 0 && (
-              <p className="mb-2 text-lg font-medium italic text-rose-100 md:text-xl">
-                &quot;{getPhrase(currentPhoto.id)}&quot;
+            {currentPhoto.phrase && (
+              <p className="mb-2 font-display text-lg italic text-rose-100 md:text-2xl">
+                &ldquo;{currentPhoto.phrase}&rdquo;
               </p>
             )}
             <p className="text-base font-semibold text-white md:text-lg">{currentPhoto.caption}</p>

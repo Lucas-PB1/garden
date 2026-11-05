@@ -1,5 +1,4 @@
 import { useAuth } from "@/context/AuthContext";
-import { MAX_PHRASES_IMPORT_BYTES } from "@/features/gardens/constants";
 import {
   addCollaborator,
   Garden,
@@ -11,9 +10,10 @@ import {
   updateLovePhrases,
   updateSpecialDate,
 } from "@/features/gardens/services/gardenService";
+import Swal from "@/lib/ui/swal";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import Swal from "sweetalert2";
+import { useCallback, useEffect, useState } from "react";
+import { sanitizeLovePhrases } from "../utils/gardenValidation";
 import { useGardenCore } from "./useGardenCore";
 
 const parseGardenDate = (date: Garden["specialDate"]) => {
@@ -56,7 +56,6 @@ export function useGarden(gardenId: string) {
   const [showShareModal, setShowShareModal] = useState(false);
 
   const [lovePhrases, setLovePhrases] = useState<string[]>([]);
-  const phrasesInputRef = useRef<HTMLInputElement>(null);
   const [showPhrasesModal, setShowPhrasesModal] = useState(false);
 
   useEffect(() => {
@@ -175,45 +174,14 @@ export function useGarden(gardenId: string) {
   };
 
   /**
-   * Imports a JSON file containing love phrases.
-   * @param e - React change event from a file input.
-   */
-  const handlePhrasesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0] && gardenId) {
-      if (e.target.files[0].size > MAX_PHRASES_IMPORT_BYTES) {
-        Swal.fire("Erro", "Envie um JSON de frases de até 256 KB.", "error");
-        e.target.value = "";
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const phrases = JSON.parse(event.target?.result as string);
-          if (Array.isArray(phrases)) {
-            const valid = phrases.filter((p) => typeof p === "string");
-            await updateLovePhrases(gardenId, valid);
-            setLovePhrases(valid);
-            Swal.fire("Sucesso", "Frases atualizadas.", "success");
-          }
-        } catch {
-          Swal.fire("Erro", "JSON inválido.", "error");
-        } finally {
-          if (phrasesInputRef.current) phrasesInputRef.current.value = "";
-        }
-      };
-      reader.readAsText(e.target.files[0]);
-    }
-  };
-
-  /**
    * Persists updated love phrases to the user's profile.
    * @param newPhrases - Array of strings.
    */
   const handleSavePhrases = async (newPhrases: string[]) => {
     if (gardenId) {
-      await updateLovePhrases(gardenId, newPhrases);
-      setLovePhrases(newPhrases);
+      const sanitized = sanitizeLovePhrases(newPhrases);
+      await updateLovePhrases(gardenId, sanitized);
+      setLovePhrases(sanitized);
     }
   };
 
@@ -291,8 +259,6 @@ export function useGarden(gardenId: string) {
     setShowDateModal,
     handleSaveSpecialDate,
     lovePhrases,
-    phrasesInputRef,
-    handlePhrasesUpload,
     showPhrasesModal,
     setShowPhrasesModal,
     handleSavePhrases,

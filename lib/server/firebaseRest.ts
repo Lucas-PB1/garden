@@ -1,4 +1,4 @@
-import { createSign } from "crypto";
+import { createPrivateKey, createSign } from "crypto";
 
 type FirestoreFields = Record<string, FirestoreValue>;
 
@@ -22,12 +22,16 @@ interface FirestoreDocument {
 interface ServiceAccountConfig {
   clientEmail: string;
   privateKey: string;
+  projectId?: string;
 }
 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 
 const getProjectId = () => {
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID ||
+    getServiceAccount().projectId ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
   if (!projectId) {
     throw new Error("Missing FIREBASE_PROJECT_ID or NEXT_PUBLIC_FIREBASE_PROJECT_ID");
@@ -36,18 +40,64 @@ const getProjectId = () => {
   return projectId;
 };
 
-const normalizePrivateKey = (privateKey: string) => privateKey.replace(/\\n/g, "\n");
+/**
+ * Normalizes a PEM private key pasted into an environment variable. Handles the common
+ * ways it gets mangled: wrapped in quotes, escaped `\\n`, Windows line endings, or the
+ * whole key collapsed onto a single line with spaces instead of newlines.
+ */
+const normalizePrivateKey = (privateKey: string) => {
+  let key = privateKey.trim();
+
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+
+  key = key.replace(/\\r/g, "").replace(/\\n/g, "\n").replace(/\r\n?/g, "\n").trim();
+
+  const match = key.match(/-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----/);
+  if (!match) return key;
+
+  const [, label, body] = match;
+  const base64 = body.replace(/\s+/g, "");
+  const lines = base64.match(/.{1,64}/g) || [];
+  return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----\n`;
+};
+
+/**
+ * Fails with a descriptive (but value-free) message when the configured key cannot be used,
+ * so a misconfigured env var is diagnosable from the logs without leaking the secret.
+ */
+const assertUsablePrivateKey = (key: string, source: string) => {
+  const hasHeader = /-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(key);
+  const hasFooter = /-----END [A-Z ]*PRIVATE KEY-----/.test(key);
+
+  try {
+    createPrivateKey(key);
+  } catch {
+    const hint = !hasHeader
+      ? "missing the '-----BEGIN PRIVATE KEY-----' header (is it the full private_key value?)"
+      : !hasFooter
+        ? "missing the '-----END PRIVATE KEY-----' footer (value looks truncated)"
+        : "PEM markers are present but the key body is invalid (truncated or altered)";
+    throw new Error(`${source} is not a usable private key: ${hint}. Length: ${key.length}.`);
+  }
+};
 
 const parseServiceAccountJson = (value: string | undefined) => {
   if (!value) return null;
 
   try {
-    const parsed = JSON.parse(value) as { client_email?: string; private_key?: string };
+    const parsed = JSON.parse(value) as {
+      client_email?: string;
+      private_key?: string;
+      project_id?: string;
+    };
     if (!parsed.client_email || !parsed.private_key) return null;
 
     return {
       clientEmail: parsed.client_email,
       privateKey: normalizePrivateKey(parsed.private_key),
+      projectId: parsed.project_id,
     };
   } catch {
     return null;
@@ -75,9 +125,12 @@ const getServiceAccount = (): ServiceAccountConfig => {
     );
   }
 
+  const normalizedKey = normalizePrivateKey(privateKey);
+  assertUsablePrivateKey(normalizedKey, "FIREBASE_PRIVATE_KEY");
+
   return {
     clientEmail,
-    privateKey: normalizePrivateKey(privateKey),
+    privateKey: normalizedKey,
   };
 };
 

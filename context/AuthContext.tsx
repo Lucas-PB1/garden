@@ -1,5 +1,6 @@
 "use client";
 
+import LoadingScreen from "@/components/brand/LoadingScreen";
 import { auth } from "@/lib/firebase/firebase";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -65,5 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo(() => ({ user, loading, logout }), [user, loading, logout]);
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {loading ? <LoadingScreen /> : children}
+    </AuthContext.Provider>
+  );
 };

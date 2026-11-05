@@ -22,9 +22,7 @@ Add the private server config for checkout/admin:
 ADMIN_EMAILS=your-email@example.com
 ADMIN_UIDS=
 
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_SERVICE_ACCOUNT_BASE64=
 
 MERCADO_PAGO_ACCESS_TOKEN=
 MERCADO_PAGO_WEBHOOK_SECRET=
@@ -32,8 +30,21 @@ MERCADO_PAGO_WEBHOOK_URL=
 MERCADO_PAGO_CHECKOUT_URL_MODE=sandbox
 ```
 
-`FIREBASE_SERVICE_ACCOUNT` or `FIREBASE_SERVICE_ACCOUNT_BASE64` can be used instead of
-`FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY`.
+### Server credentials (standard)
+
+The API routes use a dedicated service account, `love-garden-server`, with only the
+**Cloud Datastore User** role (Firestore read/write). Store its JSON key base64-encoded in a
+single variable, so line breaks in the private key can never be lost when pasting:
+
+```bash
+gcloud iam service-accounts keys create sa.json \
+  --iam-account=love-garden-server@<project-id>.iam.gserviceaccount.com
+base64 -w0 sa.json   # value for FIREBASE_SERVICE_ACCOUNT_BASE64
+rm sa.json
+```
+
+The project ID is read from the key. `FIREBASE_SERVICE_ACCOUNT` (raw JSON) and the legacy
+`FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY` pair are still accepted as fallbacks.
 
 The default sale config is stored in Firestore at `commerce/config`. Until changed in `/admin`,
 the app uses BRL 0.10 (`priceCents: 10`) for testing.

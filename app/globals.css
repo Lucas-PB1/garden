@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
+/*
+ * Love Garden visual identity
+ * - brand-ink: deep wine used for the logo, headings and primary actions
+ * - rose: love, warmth (primary accents)
+ * - leaf: the "garden" green, used sparingly for growth/positive states
+ * - cream: warm paper background shared by every page
+ * - display font (Fraunces) for headings, Geist for interface text
+ */
 @theme {
-  --font-geist-sans: "Geist", sans-serif;
-  --font-geist-mono: "Geist Mono", monospace;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  --color-brand-ink: #4c0519;
+  --color-leaf: #047857;
+  --color-leaf-soft: #d1fae5;
+  --color-cream: #fffaf6;
+}
+
+@keyframes lg-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.92);
+    opacity: 0.75;
+  }
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* The app is designed for a light, warm palette only. */
+  color-scheme: light;
+  --background: var(--color-cream);
+  --foreground: #1c1917;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-geist-sans);
+  font-family: var(--font-sans);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: #fecdd3;
+    color: var(--color-brand-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid #e11d48;
+    outline-offset: 2px;
+  }
 }
 
 /* Global Input Legibility Fix */
@@ -35,10 +76,91 @@ textarea::placeholder {
   color: #9ca3af !important; /* gray-400 */
 }
 
-/* Ensure SweetAlert2 inputs are also legible */
+/* ---------- SweetAlert2, branded (see lib/ui/swal.ts) ---------- */
+.lg-swal-popup.swal2-popup {
+  border-radius: 1rem;
+  border: 1px solid #ffe4e6;
+  background: #fffdfb;
+  font-family: var(--font-sans);
+  padding-bottom: 1.5rem;
+}
+
+.lg-swal-title.swal2-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--color-brand-ink);
+}
+
+.lg-swal-text.swal2-html-container {
+  color: #57534e;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.lg-swal-actions.swal2-actions {
+  gap: 0.5rem;
+}
+
+.lg-swal-confirm,
+.lg-swal-cancel {
+  border-radius: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.lg-swal-confirm {
+  background: #881337;
+  color: #fff;
+  box-shadow: 0 10px 24px rgb(76 5 25 / 0.15);
+}
+
+.lg-swal-confirm:hover {
+  background: #9f1239;
+}
+
+.lg-swal-confirm.lg-swal-danger {
+  background: #dc2626;
+}
+
+.lg-swal-confirm.lg-swal-danger:hover {
+  background: #b91c1c;
+}
+
+.lg-swal-cancel {
+  background: #fff;
+  color: #57534e;
+  border: 1px solid #e7e5e4;
+}
+
+.lg-swal-cancel:hover {
+  background: #fafaf9;
+  color: #881337;
+}
+
 .swal2-input,
 .swal2-textarea,
-.swal2-select {
+.swal2-select,
+.lg-swal-input {
   color: #1f2937 !important;
   background-color: #ffffff !important;
+  border-radius: 0.5rem !important;
+  border-color: #e7e5e4 !important;
+}
+
+.lg-swal-input:focus {
+  border-color: #fda4af !important;
+  box-shadow: 0 0 0 3px #ffe4e6 !important;
+}
+
+.swal2-toast.lg-swal-popup {
+  padding: 0.6rem 1rem;
+}
+
+.swal2-toast .lg-swal-title.swal2-title {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
 }

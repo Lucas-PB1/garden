@@ -1,5 +1,7 @@
 "use client";
 
+import BrandLogo from "@/components/brand/BrandLogo";
+import LoadingScreen from "@/components/brand/LoadingScreen";
 import { useAuth } from "@/context/AuthContext";
 import { fetchCheckoutStatus } from "@/features/commerce/services/checkoutService";
 import type { CheckoutOrderStatus } from "@/features/commerce/types";
@@ -20,6 +22,19 @@ const finalStatuses = new Set([
   "charged_back",
 ]);
 
+const statusLabels: Record<string, string> = {
+  created: "Criado",
+  preference_created: "Aguardando pagamento",
+  preference_failed: "Falha ao abrir checkout",
+  pending: "Em processamento",
+  approved: "Aprovado",
+  rejected: "Recusado",
+  cancelled: "Cancelado",
+  refunded: "Reembolsado",
+  charged_back: "Contestado",
+  amount_mismatch: "Em análise",
+};
+
 const getStatusCopy = (kind: CheckoutReturnKind, order: CheckoutOrderStatus | null) => {
   if (order?.status === "approved") {
     return {
@@ -35,6 +50,15 @@ const getStatusCopy = (kind: CheckoutReturnKind, order: CheckoutOrderStatus | nu
       icon: <FaExclamationTriangle />,
       title: "Pagamento em análise",
       text: "O valor confirmado não bate com o pedido, então o acesso não foi liberado automaticamente.",
+      tone: "text-amber-700",
+    };
+  }
+
+  if (order?.status === "refunded" || order?.status === "charged_back") {
+    return {
+      icon: <FaExclamationTriangle />,
+      title: "Pagamento estornado",
+      text: "Este pagamento foi devolvido, por isso o acesso vinculado a ele foi encerrado.",
       tone: "text-amber-700",
     };
   }
@@ -67,7 +91,8 @@ export default function CheckoutReturnPage({ kind }: { kind: CheckoutReturnKind 
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace(`/login?callbackUrl=/checkout/${kind}?orderId=${encodeURIComponent(orderId)}`);
+      const callbackUrl = `/checkout/${kind}?orderId=${encodeURIComponent(orderId)}`;
+      router.replace(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
     }
   }, [authLoading, kind, orderId, router, user]);
 
@@ -111,20 +136,17 @@ export default function CheckoutReturnPage({ kind }: { kind: CheckoutReturnKind 
   const copy = useMemo(() => getStatusCopy(kind, order), [kind, order]);
 
   if (authLoading || loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-rose-50">
-        <div className="h-12 w-12 animate-spin rounded-full border-2 border-rose-200 border-t-rose-700" />
-      </div>
-    );
+    return <LoadingScreen label="Consultando pagamento..." />;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#fff7f7_0%,#f0fdfa_100%)] px-5 py-10 text-stone-950">
-      <main className="w-full max-w-xl rounded-lg border border-white/80 bg-white/92 p-6 shadow-[0_24px_90px_rgba(127,29,29,0.12)] backdrop-blur md:p-8">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-[linear-gradient(180deg,#fffaf6_0%,#fff1f2_55%,#ecfdf5_100%)] px-5 py-10 text-stone-950">
+      <BrandLogo />
+      <main className="w-full max-w-xl rounded-2xl border border-white/80 bg-white/92 p-6 shadow-[0_24px_90px_rgba(127,29,29,0.12)] backdrop-blur md:p-8">
         <div className={`mb-5 inline-flex rounded-lg bg-white p-3 text-2xl shadow-sm ${copy.tone}`}>
           {copy.icon}
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-950">{copy.title}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-brand-ink">{copy.title}</h1>
         <p className="mt-3 text-base leading-7 text-stone-600">{copy.text}</p>
 
         {error && (
@@ -141,7 +163,9 @@ export default function CheckoutReturnPage({ kind }: { kind: CheckoutReturnKind 
             </div>
             <div className="mt-3 flex items-center justify-between gap-4">
               <span className="font-semibold text-stone-500">Status</span>
-              <span className="font-bold text-stone-900">{order.status}</span>
+              <span className="font-bold text-stone-900">
+                {statusLabels[order.status] || order.status}
+              </span>
             </div>
             <div className="mt-3 flex items-center justify-between gap-4">
               <span className="font-semibold text-stone-500">Valor esperado</span>

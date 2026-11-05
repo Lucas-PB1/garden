@@ -1,8 +1,8 @@
 import type { GardenTheme } from "./types";
 
 export const DEFAULT_GARDEN_THEME: GardenTheme = {
-  primaryColor: "#ec4899",
-  secondaryColor: "#f43f5e",
+  primaryColor: "#be123c",
+  secondaryColor: "#fda4af",
   bgType: "floral",
 };
 

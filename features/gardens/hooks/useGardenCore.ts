@@ -5,9 +5,14 @@ import {
   getGardenPhotos,
   uploadPhoto,
 } from "@/features/gardens/services/gardenService";
+import {
+  formatShortDatePtBr,
+  fromDateInputValue,
+  toLocalDateInputValue,
+} from "@/features/gardens/utils/dateUtils";
 import { compressImageToWebP } from "@/features/gardens/utils/imageUtils";
+import Swal, { dangerCustomClass } from "@/lib/ui/swal";
 import { useCallback, useRef, useState } from "react";
-import Swal from "sweetalert2";
 
 /**
  * Core hook for managing garden photos, including fetching, uploading, and deleting.
@@ -60,11 +65,11 @@ export function useGardenCore(gardenId: string) {
           const { value: dateVal } = await Swal.fire({
             title: "Data da memória",
             input: "date",
-            inputValue: new Date().toISOString().split("T")[0],
+            inputValue: toLocalDateInputValue(new Date()),
+            inputAttributes: { max: toLocalDateInputValue(new Date()) },
             showCancelButton: true,
             confirmButtonText: "Salvar memória",
             cancelButtonText: "Cancelar",
-            confirmButtonColor: "#be123c",
           });
 
           if (!dateVal) return;
@@ -77,7 +82,7 @@ export function useGardenCore(gardenId: string) {
             return;
           }
 
-          const formattedDate = new Date(dateVal + "T12:00:00").toLocaleDateString();
+          const formattedDate = formatShortDatePtBr(fromDateInputValue(dateVal));
           await uploadPhoto({
             file: webpFile,
             gardenId,
@@ -108,8 +113,7 @@ export function useGardenCore(gardenId: string) {
       text: "Essa foto será removida da coleção.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#cbd5e1",
+      customClass: dangerCustomClass,
       confirmButtonText: "Excluir",
       cancelButtonText: "Cancelar",
     });

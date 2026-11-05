@@ -1,6 +1,8 @@
 "use client";
 
+import BrandLogo from "@/components/brand/BrandLogo";
 import { useRegister } from "@/features/auth/hooks/useRegister";
+import Image from "next/image";
 import Link from "next/link";
 import { FcGoogle } from "react-icons/fc";
 
@@ -24,57 +26,77 @@ export default function RegisterPage() {
   } = useRegister();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#fff7f7_0%,#fff1f2_52%,#ffffff_100%)] px-4">
-      <div className="relative w-full max-w-md rounded-lg border border-rose-100 bg-white/90 p-7 shadow-[0_24px_80px_rgba(127,29,29,0.10)] backdrop-blur">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-cream px-4 py-10">
+      <Image src="/bg/floral-bg-v2.png" alt="" fill priority className="object-cover opacity-70" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,250,246,0.82)_0%,rgba(255,241,242,0.9)_60%,rgba(255,250,246,0.96)_100%)]" />
+      <div className="relative w-full max-w-md rounded-2xl border border-rose-100 bg-white/92 p-7 shadow-[0_24px_80px_rgba(76,5,25,0.12)] backdrop-blur">
         <div className="mb-8 text-center">
-          <span className="mb-3 inline-flex rounded-full border border-rose-100 bg-rose-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-rose-500">
-            Love Garden
-          </span>
-          <h1 className="mb-2 text-3xl font-semibold tracking-tight text-stone-950">
-            Crie sua coleção
+          <BrandLogo className="mb-6" />
+          <h1 className="mb-2 text-3xl font-semibold tracking-tight text-brand-ink">
+            Plante o jardim de vocês
           </h1>
           <p className="text-sm text-stone-500">Comece um espaço privado para vocês dois.</p>
         </div>
 
         {error && (
-          <div className="mb-6 rounded-lg border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-500">
+          <div
+            role="alert"
+            className="mb-6 rounded-lg border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600"
+          >
             {error}
           </div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-5">
           <div>
-            <label className="mb-2 ml-1 block text-sm font-semibold text-stone-700">Seu nome</label>
+            <label htmlFor="name" className="mb-2 ml-1 block text-sm font-semibold text-stone-700">
+              Seu nome
+            </label>
             <input
+              id="name"
               type="text"
+              autoComplete="name"
+              maxLength={80}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border border-stone-200 bg-white px-4 py-3 text-stone-800 shadow-sm transition-all placeholder:text-stone-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-rose-200"
-              placeholder="Rose"
+              placeholder="Como você quer ser chamado(a)"
               disabled={isSubmitting || isGoogleSubmitting}
               required
             />
           </div>
           <div>
-            <label className="mb-2 ml-1 block text-sm font-semibold text-stone-700">E-mail</label>
+            <label htmlFor="email" className="mb-2 ml-1 block text-sm font-semibold text-stone-700">
+              E-mail
+            </label>
             <input
+              id="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-stone-200 bg-white px-4 py-3 text-stone-800 shadow-sm transition-all placeholder:text-stone-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-rose-200"
-              placeholder="rose@garden.com"
+              placeholder="voce@email.com"
               disabled={isSubmitting || isGoogleSubmitting}
               required
             />
           </div>
           <div>
-            <label className="mb-2 ml-1 block text-sm font-semibold text-stone-700">Senha</label>
+            <label
+              htmlFor="password"
+              className="mb-2 ml-1 block text-sm font-semibold text-stone-700"
+            >
+              Senha
+            </label>
             <input
+              id="password"
               type="password"
+              autoComplete="new-password"
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-stone-200 bg-white px-4 py-3 text-stone-800 shadow-sm transition-all placeholder:text-stone-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-rose-200"
-              placeholder="••••••••"
+              placeholder="Mínimo de 6 caracteres"
               disabled={isSubmitting || isGoogleSubmitting}
               required
             />
@@ -89,9 +111,9 @@ export default function RegisterPage() {
         </form>
 
         <div className="my-6 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">ou</span>
-          <div className="h-px flex-1 bg-gray-200" />
+          <div className="h-px flex-1 bg-rose-100" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">ou</span>
+          <div className="h-px flex-1 bg-rose-100" />
         </div>
 
         <button
@@ -106,7 +128,7 @@ export default function RegisterPage() {
 
         <div className="mt-8 text-center">
           <p className="text-sm text-stone-500">
-            Já tem um lugar?{" "}
+            Já tem um jardim?{" "}
             <Link
               href="/login"
               className="font-semibold text-rose-700 transition hover:text-rose-800"

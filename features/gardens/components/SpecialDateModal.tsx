@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { FaTimes } from "react-icons/fa";
+import { fromDateInputValue, toLocalDateInputValue } from "../utils/dateUtils";
 
 interface SpecialDateModalProps {
   onClose: () => void;
@@ -41,7 +42,7 @@ export default function SpecialDateModal({
         >
           <FaTimes />
         </button>
-        <h3 className="mb-1 text-2xl font-semibold text-stone-950">Data especial</h3>
+        <h3 className="mb-1 text-2xl font-semibold text-brand-ink">Data especial</h3>
         <p className="mb-6 text-sm text-stone-500">Defina um marco para a coleção.</p>
 
         <form
@@ -51,8 +52,7 @@ export default function SpecialDateModal({
             const dateVal = formData.get("date") as string;
             const titleVal = formData.get("title") as string;
             if (dateVal && titleVal) {
-              const dateObj = new Date(dateVal + "T12:00:00");
-              onSave(dateObj, titleVal);
+              onSave(fromDateInputValue(dateVal), titleVal.trim());
             }
           }}
           className="space-y-4"
@@ -63,6 +63,7 @@ export default function SpecialDateModal({
               name="title"
               defaultValue={currentTitle}
               placeholder="Ex: Nosso Namoro"
+              maxLength={80}
               className="w-full rounded-lg border border-stone-200 p-3 transition focus:border-rose-300 focus:outline-none focus:ring focus:ring-rose-100"
               required
             />
@@ -72,7 +73,7 @@ export default function SpecialDateModal({
             <input
               type="date"
               name="date"
-              defaultValue={currentDate ? currentDate.toISOString().split("T")[0] : ""}
+              defaultValue={currentDate ? toLocalDateInputValue(currentDate) : ""}
               className="w-full rounded-lg border border-stone-200 p-3 transition focus:border-rose-300 focus:outline-none focus:ring focus:ring-rose-100"
               required
             />

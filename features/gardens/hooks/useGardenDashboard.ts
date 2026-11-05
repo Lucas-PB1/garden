@@ -42,6 +42,7 @@ export function useGardenDashboard(userId: string | undefined) {
 
   return {
     gardens: filteredGardens,
+    allGardens: gardens,
     loading,
     filter,
     setFilter,

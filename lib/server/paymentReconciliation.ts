@@ -1,5 +1,6 @@
 import {
   amountToCents,
+  getEntitlement,
   getOrder,
   grantEntitlement,
   revokeEntitlement,
@@ -93,6 +94,20 @@ export const reconcileMercadoPagoPayment = async (payment: MercadoPagoPayment) =
   }
 
   const mappedStatus = mapMercadoPagoStatus(payment.status);
+  const isReversal =
+    mappedStatus === "refunded" || mappedStatus === "charged_back" || mappedStatus === "cancelled";
+  const approvedPaymentId =
+    order.status === "approved" && typeof order.lastPayment?.id === "string"
+      ? order.lastPayment.id
+      : null;
+  const reversesApprovedPayment = isReversal && approvedPaymentId === paymentId;
+
+  // A late notification for a different payment attempt (an expired Pix, a declined card)
+  // must not downgrade an order that was already approved by another payment.
+  if (order.status === "approved" && !reversesApprovedPayment) {
+    await updateOrder(order.id, { paymentIds });
+    return { approved: true, status: "approved", ignoredPaymentStatus: mappedStatus };
+  }
 
   await updateOrder(order.id, {
     status: mappedStatus,
@@ -100,12 +115,13 @@ export const reconcileMercadoPagoPayment = async (payment: MercadoPagoPayment) =
     lastPayment,
   });
 
-  if (
-    mappedStatus === "refunded" ||
-    mappedStatus === "charged_back" ||
-    mappedStatus === "cancelled"
-  ) {
-    await revokeEntitlement(order.userId, mappedStatus);
+  if (isReversal) {
+    // Only revoke access when the reversed payment is the one that granted it. Otherwise a
+    // cancelled attempt from an abandoned order would remove access paid by another order.
+    const entitlement = await getEntitlement(order.userId);
+    if (entitlement?.active && entitlement.paymentId === paymentId) {
+      await revokeEntitlement(order.userId, mappedStatus);
+    }
   }
 
   return { approved: false, status: mappedStatus };
