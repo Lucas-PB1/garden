@@ -1,4 +1,4 @@
-import { createSign } from "crypto";
+import { createPrivateKey, createSign } from "crypto";
 
 type FirestoreFields = Record<string, FirestoreValue>;
 
@@ -59,6 +59,26 @@ const normalizePrivateKey = (privateKey: string) => {
   return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----\n`;
 };
 
+/**
+ * Fails with a descriptive (but value-free) message when the configured key cannot be used,
+ * so a misconfigured env var is diagnosable from the logs without leaking the secret.
+ */
+const assertUsablePrivateKey = (key: string, source: string) => {
+  const hasHeader = /-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(key);
+  const hasFooter = /-----END [A-Z ]*PRIVATE KEY-----/.test(key);
+
+  try {
+    createPrivateKey(key);
+  } catch {
+    const hint = !hasHeader
+      ? "missing the '-----BEGIN PRIVATE KEY-----' header (is it the full private_key value?)"
+      : !hasFooter
+        ? "missing the '-----END PRIVATE KEY-----' footer (value looks truncated)"
+        : "PEM markers are present but the key body is invalid (truncated or altered)";
+    throw new Error(`${source} is not a usable private key: ${hint}. Length: ${key.length}.`);
+  }
+};
+
 const parseServiceAccountJson = (value: string | undefined) => {
   if (!value) return null;
 
@@ -96,9 +116,12 @@ const getServiceAccount = (): ServiceAccountConfig => {
     );
   }
 
+  const normalizedKey = normalizePrivateKey(privateKey);
+  assertUsablePrivateKey(normalizedKey, "FIREBASE_PRIVATE_KEY");
+
   return {
     clientEmail,
-    privateKey: normalizePrivateKey(privateKey),
+    privateKey: normalizedKey,
   };
 };
 
