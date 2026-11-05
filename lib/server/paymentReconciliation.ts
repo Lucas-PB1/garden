@@ -56,8 +56,27 @@ export const reconcileMercadoPagoPayment = async (payment: MercadoPagoPayment) =
     paymentMethodId: payment.payment_method_id || null,
     paymentTypeId: payment.payment_type_id || null,
     dateApproved: payment.date_approved || null,
+    liveMode: typeof payment.live_mode === "boolean" ? payment.live_mode : null,
     receivedAt: new Date().toISOString(),
   };
+
+  // A sandbox payment must never settle a live order (and vice versa). Orders created before
+  // this field existed have no liveMode and skip the check.
+  const modeMatches =
+    typeof order.liveMode !== "boolean" ||
+    typeof payment.live_mode !== "boolean" ||
+    order.liveMode === payment.live_mode;
+
+  if (payment.status === "approved" && !modeMatches) {
+    await updateOrder(order.id, {
+      status: "mode_mismatch",
+      paymentIds,
+      lastPayment,
+      securityFlags: ["mode_mismatch"],
+    });
+
+    return { approved: false, status: "mode_mismatch", securityFlags: ["mode_mismatch"] };
+  }
 
   if (payment.status === "approved" && (!amountMatches || !currencyMatches)) {
     const securityFlags = [

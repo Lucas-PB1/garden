@@ -11,7 +11,8 @@ export type CommerceOrderStatus =
   | "cancelled"
   | "refunded"
   | "charged_back"
-  | "amount_mismatch";
+  | "amount_mismatch"
+  | "mode_mismatch";
 
 export interface CommerceConfig {
   productName: string;
@@ -48,6 +49,8 @@ export interface CommerceOrder {
   paymentIds?: string[];
   lastPayment?: Record<string, unknown>;
   securityFlags?: string[];
+  /** false when the order was created with sandbox (test) checkout. */
+  liveMode?: boolean;
   createdAt: string;
   updatedAt: string;
   approvedAt?: string;
@@ -169,6 +172,7 @@ export const createCheckoutOrder = async ({
     currencyId: config.currencyId,
     status: "created",
     externalReference: orderId,
+    liveMode: process.env.MERCADO_PAGO_CHECKOUT_URL_MODE !== "sandbox",
     paymentIds: [],
     createdAt: now,
     updatedAt: now,

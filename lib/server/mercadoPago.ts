@@ -18,11 +18,22 @@ export interface MercadoPagoPayment {
   collector_id?: number;
   payment_method_id?: string;
   payment_type_id?: string;
+  /** false for payments made with test credentials (sandbox). */
+  live_mode?: boolean;
   payer?: {
     email?: string;
     first_name?: string;
     last_name?: string;
   };
+}
+
+class MercadoPagoRequestError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
 const getMercadoPagoAccessToken = () => {
@@ -35,11 +46,29 @@ const getMercadoPagoAccessToken = () => {
   return accessToken;
 };
 
-const mercadoPagoFetch = async <T>(url: string, init: RequestInit = {}) => {
+/**
+ * Tokens that may own a payment, in lookup order: this environment's token, then the optional
+ * test token. Production sets MERCADO_PAGO_TEST_ACCESS_TOKEN so sandbox payments created by
+ * preview deployments (which notify the production webhook) can still be reconciled.
+ */
+const getPaymentLookupTokens = () =>
+  Array.from(
+    new Set(
+      [getMercadoPagoAccessToken(), process.env.MERCADO_PAGO_TEST_ACCESS_TOKEN].filter(
+        (token): token is string => Boolean(token),
+      ),
+    ),
+  );
+
+const mercadoPagoFetch = async <T>(
+  url: string,
+  init: RequestInit = {},
+  accessToken = getMercadoPagoAccessToken(),
+) => {
   const response = await fetch(url, {
     ...init,
     headers: {
-      Authorization: `Bearer ${getMercadoPagoAccessToken()}`,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
       ...(init.headers || {}),
     },
@@ -48,7 +77,10 @@ const mercadoPagoFetch = async <T>(url: string, init: RequestInit = {}) => {
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(`Mercado Pago request failed (${response.status}): ${message.slice(0, 500)}`);
+    throw new MercadoPagoRequestError(
+      response.status,
+      `Mercado Pago request failed (${response.status}): ${message.slice(0, 500)}`,
+    );
   }
 
   return (await response.json()) as T;
@@ -128,7 +160,21 @@ export const createMercadoPagoPreference = async ({
   );
 };
 
-export const getMercadoPagoPayment = async (paymentId: string) =>
-  mercadoPagoFetch<MercadoPagoPayment>(
-    `https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`,
-  );
+export const getMercadoPagoPayment = async (paymentId: string) => {
+  const url = `https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`;
+  const tokens = getPaymentLookupTokens();
+
+  for (const [index, token] of tokens.entries()) {
+    try {
+      return await mercadoPagoFetch<MercadoPagoPayment>(url, {}, token);
+    } catch (error) {
+      const isLast = index === tokens.length - 1;
+      // A payment that belongs to the other account (live vs test) answers 401/403/404.
+      const notOwnedByThisToken =
+        error instanceof MercadoPagoRequestError && [401, 403, 404].includes(error.status);
+      if (isLast || !notOwnedByThisToken) throw error;
+    }
+  }
+
+  throw new Error("No Mercado Pago access token configured.");
+};
