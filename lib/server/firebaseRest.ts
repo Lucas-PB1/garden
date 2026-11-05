@@ -22,12 +22,16 @@ interface FirestoreDocument {
 interface ServiceAccountConfig {
   clientEmail: string;
   privateKey: string;
+  projectId?: string;
 }
 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 
 const getProjectId = () => {
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID ||
+    getServiceAccount().projectId ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
   if (!projectId) {
     throw new Error("Missing FIREBASE_PROJECT_ID or NEXT_PUBLIC_FIREBASE_PROJECT_ID");
@@ -83,12 +87,17 @@ const parseServiceAccountJson = (value: string | undefined) => {
   if (!value) return null;
 
   try {
-    const parsed = JSON.parse(value) as { client_email?: string; private_key?: string };
+    const parsed = JSON.parse(value) as {
+      client_email?: string;
+      private_key?: string;
+      project_id?: string;
+    };
     if (!parsed.client_email || !parsed.private_key) return null;
 
     return {
       clientEmail: parsed.client_email,
       privateKey: normalizePrivateKey(parsed.private_key),
+      projectId: parsed.project_id,
     };
   } catch {
     return null;
